@@ -594,8 +594,83 @@ KDoc apply as written. This file lists the places where a call or a result diffe
 
 ## Example app
 
-`example/` follows MPChartExample page for page; not every page is ported yet. These are its differences from
-the Android app on top of the library's above, each with its reason.
+`example/` follows MPChartExample page for page: its home list has MainActivity's sections and entries, and each
+entry opens the port of its Activity. These are its differences from the Android app on top of the library's above,
+each with its reason; a page's header comment lists what else that page leaves out.
+
+- **Two of MainActivity's 42 entries have no page.** Other Charts / Combined Chart (`CombinedChartActivity`) is
+  blocked: `CombinedChart` is not ported yet. Line Charts / From Java (`JavaChartActivity`) shows that the Kotlin
+  library can be called from Java; a Dart package has no second language to show it from, so the entry is left out.
+  The other entries keep MainActivity's order and text.
+- **A page is titled with the name of its entry** ("Dual Axis"), where the Activity shows its class name
+  ("LineChartActivity2"). The All chart types pages have DesignActivity's titles.
+- **The "View on GitHub" and "Save to Gallery" menu items are not ported**, on any page: the first needs a URL
+  launcher and the second a gallery plugin and the storage permission, and the example has no plugins. An Activity
+  whose menu is `only_github.xml` therefore has no overflow button. Every other item of an Activity's menu is there,
+  in the menu file's order, including the items the Activity's `onOptionsItemSelected` has no branch for, which do
+  nothing here as on Android. `Chart.toPngBytes` gives the image `saveToGallery` would save.
+- **`Math.random()` is a generator with a fixed seed** (`DemoBase.random` in `lib/notimportant/demo_base.dart`), so
+  every run of a page shows the same charts, where Android shows new numbers on every start. A page draws from it in
+  the Activity's order. Where Kotlin seeds its generator itself, the page shows Android's numbers: `KotlinRandom` is
+  Kotlin's `Random(seed)` (the Compose pages) and `JavaRandom` is `java.util.Random(seed)` (the Performance pages).
+  Entry values are Dart doubles, where Kotlin rounds them to `Float`.
+- **Setting a SeekBar's progress in `onCreate` loads the data once.** On Android each `seekBar.progress = …` calls
+  `onProgressChanged`, so an Activity with two seek bars builds its data twice before the first frame, the first time
+  with the second bar still at its XML value. A page sets both values and loads once, which shows the same chart from
+  fewer random draws. Basic 2 and Negative Horizontal keep Kotlin's two calls.
+- **The pages are Material widgets on the Activities' light background.** A SeekBar is a `Slider` with the layout's
+  maximum and its value text beside it, a RadioGroup, Switch or Button the Material widget of that name, a Toast a
+  snack bar, an AlertDialog Material's, a ListView row a widget that is built again when it scrolls back into view
+  (its data is built once and kept by the page), the ViewPager a `PageView` that keeps a page alive once it was
+  shown instead of preloading three pages, and a Fragment a widget. A chart's `setBackgroundColor` is a `ColoredBox`
+  behind it. The action bar and the home list keep the app's dark Nightfall colours.
+- **The markers and the entry icon are painted, not decoded.** `MyMarkerView`, `XYMarkerView`,
+  `StackedBarsMarkerView` and `RadarMarkerView` (`lib/custom/`) draw the layouts `custom_marker_view.xml` and
+  `radar_markerview.xml` on the chart canvas, with the bitmaps `marker2.png` and `radar_marker.png` as paths, and
+  `R.drawable.star` and `R.drawable.fade_red` are `PainterDrawable`s (`lib/custom/demo_drawables.dart`). A decoded
+  image arrives later than the first frame; a painted one is there when the page builds its entries.
+- **An animation `onCreate` starts runs when the chart's widget is created** (the `setup` of its `ChartHostWidget`),
+  because a chart without a widget ends an animation at once. Where the data comes from an asset, which Flutter reads
+  asynchronously, the chart shows without data until it has arrived: Sine's `animateXY` may then already be running,
+  and the two asset pages of the View Pager start their animation when the data is set.
+- **The center text of the pie charts has one style.** `PieChart.centerText` is a `String`, so the sizes, colours
+  and italics of the Activities' `SpannableString`s are gone on Pie Charts / Basic, Value Lines and Half Pie, the pie
+  rows of Scrolling Charts / Multiple and the pie page of the View Pager; the text and its line breaks are kept.
+- **Half Pie puts the lower half of the chart below the page with an `OverflowBox`.** `moveOffScreen()` gives the
+  chart view a bottom margin of minus 65 % of the display height; the page makes the chart that much taller than
+  its body, aligned to the top, and clips what lies below.
+- **Realtime's "Add Multiple" has one feeder, which stops when the page is left.** The Activity feeds 1000 entries
+  from a `Thread` that sleeps 25 ms between them; `thread?.interrupt()` only cuts one sleep short there, because the
+  loop catches the exception, so choosing the item again runs two feeders at once and the feed goes on after
+  `onPause`. The page runs one periodic `Timer` of 25 ms on the UI isolate; choosing the item again restarts the 1000
+  entries, and the feed ends when the app becomes inactive, when the page is popped and when it is disposed.
+- **Hourly takes the time from `DateTime.now`**, a constructor parameter of the page so that a test can fix it, and
+  writes `SimpleDateFormat("dd MMM HH:mm", Locale.ENGLISH)` out by hand, in the device's time zone as on Android.
+- **The Performance pages build their data on the UI isolate.** The Activities build it on a single-thread executor
+  and post it back; the pages build it in a `Timer(Duration.zero)`, after the frame that shows "Building … entries...",
+  and drop a build a newer one has superseded, as the Activities' generation check does. The 500k entries therefore
+  block one frame for as long as they take to build. The readout's clock is a `Stopwatch` with microsecond resolution
+  where Android has `System.nanoTime()`, and the timed charts measure `onDraw`, which records the draw calls; Flutter
+  rasterises them on another thread, which the readout does not see. As on Android, the Decimation switch starts
+  checked while the chart's decimation is still off, because the switch's listener only runs on a change.
+- **The Compose pages are built on the chart widgets and `ChartController`**, the ports of MPChartCompose's
+  composables and `rememberChartState()`: `remember` and `rememberSaveable` values are fields of the page's `State`
+  (not saved across a restart of the app), a `LaunchedEffect(key)` is a call made after the frame that follows a
+  change of its key, and the `LazyColumn` is a `ListView.builder`. The colour scheme has no `background` (Flutter's
+  `ColorScheme` has deprecated it); the pages paint the stage colour themselves.
+- **All animations and Animated data changes poll and report as the Activities do**, with a periodic `Timer` for the
+  Runnable that polls `chart.isAnimating` every 80 ms; the status chip says "Idle" from the first frame, where the
+  Activity's is empty until its first poll. The tabs, chips and action buttons, clickable TextViews in the layout, are
+  `GestureDetector`s.
+- **The Open Sans faces and the point files are MPChartExample's assets** (`example/assets/`): Light, Regular and
+  Bold, which the Activities load with `Typeface.createFromAsset` and the pages name as `tfLight`, `tfRegular` and
+  `tfBold`, and the `.txt` files `FileUtils.loadEntriesFromAssets` reads through the page's `DefaultAssetBundle`.
+- **The scrollables that host charts start a drag from the down** (`DragStartBehavior.down`), so a swipe that starts on
+  a chart scrolls the list as far as one that starts beside it, as on Android; with Flutter's default
+  `DragStartBehavior.start` the list drops the travel up to its touch slop. See "A scrolling parent can take a touch
+  over until the chart claims it, as on Android" under Behavior differences, which also gives the iOS exception.
+
+The All chart types page:
 
 - **The All chart types page keeps Flutter's automatic back button**, which DesignActivity does not show, because iOS
   has no system back button. So the title starts about 72 dp from the left, where Android's starts at 16 dp.
@@ -617,15 +692,5 @@ the Android app on top of the library's above, each with its reason.
   (elevation 2.25 at 40 % black instead of Material's 4 dp), because Impeller's shadow at Android's elevation is about
   twice as tall. HarmonyOS renders with Skia (GL): its embedding logs "enable Skia in Ohos" although the HAP sets
   `enable_impeller` to true. Skia draws the shadow there, slightly differently, and the fit does not cover it.
-- **The pages under Line Charts, Bar Charts, Pie Charts and Other Charts are not ports of their Activities yet.** They
-  are pages in the Nightfall style with their own seeded data and buttons. They turn pinch zoom on, where
-  BarChartActivity, BarChartActivityMultiDataset, HorizontalBarChartActivity, StackedBarActivity and
-  CandleStickChartActivity turn it off and so zoom each axis on its own. The pie page combines PieChartActivity,
-  HalfPieChartActivity and PiePolylineChartActivity, and the radar page RadarChartActivity, both with fixed data and
-  no zoom; each page lists its differences in its header comment. The other Activities are not ported yet.
-- **The scrollables that host charts start a drag from the down** (`DragStartBehavior.down`), so a swipe that starts on
-  a chart scrolls the list as far as one that starts beside it, as on Android; with Flutter's default
-  `DragStartBehavior.start` the list drops the travel up to its touch slop. See "A scrolling parent can take a touch
-  over until the chart claims it, as on Android" under Behavior differences, which also gives the iOS exception.
 - **The `/design` deep link's `only` and `from` count the ported cards.** Until the combined card is ported,
   the cards Kotlin numbers 8, 9 and 10 are 7 to 9 here; 0 to 6 match Kotlin's.

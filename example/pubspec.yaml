@@ -20,3 +20,22 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # MPChartExample's assets (src/main/assets): the point files its pages read and the Open Sans faces its charts use.
+  assets:
+    - assets/cosine.txt
+    - assets/n.txt
+    - assets/nlogn.txt
+    - assets/othersine.txt
+    - assets/sine.txt
+    - assets/square.txt
+    - assets/three.txt
+
+  fonts:
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/OpenSans-Light.ttf
+          weight: 300
+        - asset: assets/fonts/OpenSans-Regular.ttf
+        - asset: assets/fonts/OpenSans-Bold.ttf
+          weight: 700

@@ -1,27 +1,16 @@
-// Other Charts / Bubble Chart (MPChartExample's BubbleChartActivity): three data sets of bubbles of very different
-// sizes, in the Nightfall style. The data is generated as the Activity's onProgressChanged generates it at the seek
-// bars' initial values, from a seeded Random; the star icons are left out, as the Activity does not draw them. Two
-// neighbouring bubbles of the first set are given the sizes 0 and 4, so a device check can highlight a bubble of size
-// 0 next to a small one.
-import 'dart:math' as math;
-
-// Material has its own `Easing`; the chart's is MPAndroidChart's Easing.
+// Ported from MPChartExample: BubbleChartActivity.kt, with res/layout/activity_bubblechart.xml and
+// res/menu/bubble.xml.
+//
+// Other Charts / Bubble Chart: three data sets of bubbles with random values and sizes on a white chart, with a seek
+// bar for the number of entries and one for their range. Not ported: the "View on GitHub" and "Save to Gallery" menu
+// items (see notimportant/demo_base.dart).
 import 'package:flutter/material.dart' hide Easing;
 import 'package:mp_flutter_chart/mp_flutter_chart.dart';
 
-import '../design/nightfall.dart';
+import '../custom/demo_drawables.dart';
+import '../notimportant/demo_base.dart';
 
-/// Entries per data set, the Activity's seekBar1 initial value.
-const int _count = 10;
-
-/// Upper end of the values and sizes, the Activity's seekBar2 initial value.
-const double _range = 50;
-
-/// x of the size-0 bubble in the first data set; the bubble at the next x has size 4 and the same y.
-const int bubbleChartZeroSizeX = 3;
-
-/// A [BubbleChart] of three data sets inside a [ListView], with buttons that drive it through a [ChartController],
-/// toggle the size normalization and highlight the bubble of size 0.
+/// BubbleChartActivity.
 class BubbleChartPage extends StatefulWidget {
   const BubbleChartPage({super.key});
 
@@ -29,163 +18,166 @@ class BubbleChartPage extends StatefulWidget {
   State<BubbleChartPage> createState() => _BubbleChartPageState();
 }
 
-class _BubbleChartPageState extends State<BubbleChartPage> {
-  final ChartController _controller = ChartController();
-  int _seed = 0;
-  late BubbleData _data = bubbleChartData(_seed);
-  bool _normalizeSize = true;
+class _BubbleChartPageState extends State<BubbleChartPage> with DemoBase {
+  /// `binding.chart1`.
+  final BubbleChartView _chart = BubbleChartView();
 
-  /// The chart, kept from setup for [_highlightZeroSize].
-  BubbleChartView? _chart;
+  /// `binding.seekBar1.progress`.
+  int _seekBar1 = 10;
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  /// Highlights the bubble of size 0 as a tap on it would. ChartController.highlight cannot: it highlights with a y of
-  /// NaN, and BubbleChartRenderer.drawHighlighted, as Kotlin's, skips a highlight whose y is not the entry's, so
-  /// neither the highlight ring nor the marker would be drawn.
-  void _highlightZeroSize() {
-    final entry = _data.dataSets.first.getEntryForIndex(bubbleChartZeroSizeX);
-    _chart?.highlightValue(entry.x, 0, y: entry.y);
-  }
+  /// `binding.seekBar2.progress`.
+  int _seekBar2 = 50;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Bubble Chart'),
-      backgroundColor: Nightfall.card,
-      foregroundColor: Nightfall.text,
-    ),
-    body: ListView(
-      dragStartBehavior: chartScrollDragStartBehavior,
-      padding: const EdgeInsets.all(14),
+  void initState() {
+    super.initState();
+
+    _chart
+      ..description.isEnabled = false
+      ..onChartValueSelectedListener = OnChartValueSelectedListener.fromFunction(
+        onValueSelected: (e, h) =>
+            logI('VAL SELECTED', 'Value: ${e.y}, xIndex: ${e.x}, DataSet index: ${h.dataSetIndex}'),
+        onNothingSelected: () {},
+      )
+      ..isDrawGridBackgroundEnabled = false
+      ..isTouchEnabled = true
+      ..isDragEnabled = true
+      ..isScaleEnabled = true
+      ..maxVisibleCount = 200
+      ..isPinchZoomEnabled = true;
+
+    // Setting the progress of the seek bars calls onProgressChanged, which sets the data.
+    _onProgressChanged();
+
+    _chart.legend
+      ..verticalAlignment = LegendVerticalAlignment.TOP
+      ..horizontalAlignment = LegendHorizontalAlignment.RIGHT
+      ..orientation = LegendOrientation.VERTICAL
+      ..isDrawInsideEnabled = false
+      ..typeface = tfLight;
+
+    _chart.axisLeft
+      ..typeface = tfLight
+      ..spaceTop = 30
+      ..spaceBottom = 30
+      ..isDrawZeroLineEnabled = false;
+
+    _chart.axisRight.isEnabled = false;
+
+    _chart.xAxis
+      ..position = XAxisPosition.BOTTOM
+      ..typeface = tfLight;
+  }
+
+  /// `onProgressChanged`: new random data for the progress of the two seek bars.
+  void _onProgressChanged() {
+    final count = _seekBar1;
+    final range = _seekBar2;
+
+    final values1 = <BubbleEntry>[];
+    final values2 = <BubbleEntry>[];
+    final values3 = <BubbleEntry>[];
+
+    for (var i = 0; i < count; i++) {
+      values1.add(
+        BubbleEntry(x: i.toDouble(), y: mathRandom() * range, size: mathRandom() * range, icon: starDrawable),
+      );
+      values2.add(
+        BubbleEntry(x: i.toDouble(), y: mathRandom() * range, size: mathRandom() * range, icon: starDrawable),
+      );
+      values3.add(BubbleEntry(x: i.toDouble(), y: mathRandom() * range, size: mathRandom() * range));
+    }
+
+    final set1 = BubbleDataSet(values1, 'DS 1')
+      ..isDrawIconsEnabled = false
+      ..setColor(ColorTemplate.COLORFUL_COLORS[0], 130)
+      ..isDrawValuesEnabled = true;
+
+    final set2 = BubbleDataSet(values2, 'DS 2')
+      ..isDrawIconsEnabled = false
+      ..iconsOffset = MPPointF(0, 15)
+      ..setColor(ColorTemplate.COLORFUL_COLORS[1], 130)
+      ..isDrawValuesEnabled = true;
+
+    final set3 = BubbleDataSet(values3, 'DS 3')
+      ..setColor(ColorTemplate.COLORFUL_COLORS[2], 130)
+      ..isDrawValuesEnabled = true;
+
+    final data = BubbleData([set1, set2, set3])
+      ..setDrawValues(false)
+      ..setValueTypeface(tfLight)
+      ..setValueTextSize(8)
+      ..setValueTextColor(const Color(0xFFFFFFFF))
+      ..setHighlightCircleWidth(1.5);
+
+    _chart.data = data;
+    _chart.invalidate();
+  }
+
+  /// res/menu/bubble.xml.
+  List<DemoMenuItem> get _menu => [
+    DemoMenuItem('Toggle Values', () {
+      for (final set in _chart.data?.dataSets ?? const <IBubbleDataSet>[]) {
+        set.isDrawValuesEnabled = !set.isDrawValuesEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Icons', () {
+      for (final set in _chart.data?.dataSets ?? const <IBubbleDataSet>[]) {
+        set.isDrawIconsEnabled = !set.isDrawIconsEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Highlight', () {
+      final data = _chart.data;
+      if (data != null) {
+        data.isHighlightEnabled = !data.isHighlightEnabled;
+        _chart.invalidate();
+      }
+    }),
+    DemoMenuItem('Toggle PinchZoom', () {
+      _chart.isPinchZoomEnabled = !_chart.isPinchZoomEnabled;
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Auto Scale', () {
+      _chart.isAutoScaleMinMaxEnabled = !_chart.isAutoScaleMinMaxEnabled;
+      _chart.notifyDataSetChanged();
+    }),
+    DemoMenuItem('Animate X', () => _chart.animateX(2000)),
+    DemoMenuItem('Animate Y', () => _chart.animateY(2000)),
+    DemoMenuItem('Animate XY', () => _chart.animateXY(2000, 2000)),
+  ];
+
+  @override
+  Widget build(BuildContext context) => DemoScaffold(
+    title: 'Bubble Chart',
+    menu: _menu,
+    body: Column(
       children: [
-        ChartCard(
-          title: 'Three bubble series',
-          subtitle: 'Drag, pinch or double-tap the chart; tap a bubble',
-          children: [
-            SizedBox(
-              height: 300,
-              child: BubbleChart(
-                data: _data,
-                controller: _controller,
-                animateChanges: true,
-                contentDescription: 'Bubble chart with three data sets',
-                marker: (entry, highlight) => Pill(
-                  '${_data.getDataSetByIndex(highlight.dataSetIndex)?.label ?? ''}'
-                  ' · x ${entry.x.toStringAsFixed(0)} · ${entry.y.toStringAsFixed(1)}'
-                  ' · size ${entry is BubbleEntry ? entry.size.toStringAsFixed(1) : '-'}',
-                ),
-                setup: (chart) {
-                  _chart = chart;
-                  _setup(chart);
-                },
-                update: (chart) {
-                  for (final set in _data.dataSets.cast<BubbleDataSet>()) {
-                    set.isNormalizeSizeEnabled = _normalizeSize;
-                  }
-                },
-              ),
-            ),
-            StatusLine(_controller),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ExampleButton(
-                  'animateY',
-                  Nightfall.accent,
-                  () => _controller.animateY(1500),
-                ),
-                ExampleButton('zoomIn', Nightfall.coral, _controller.zoomIn),
-                ExampleButton(
-                  'fitScreen',
-                  Nightfall.amber,
-                  _controller.fitScreen,
-                ),
-                ExampleButton(
-                  'switch data',
-                  Nightfall.violet,
-                  () => setState(() => _data = bubbleChartData(++_seed)),
-                ),
-                ExampleButton(
-                  'toggle normalize',
-                  Nightfall.green,
-                  () => setState(() => _normalizeSize = !_normalizeSize),
-                ),
-                ExampleButton(
-                  'highlight size 0',
-                  Nightfall.accent,
-                  _highlightZeroSize,
-                ),
-              ],
-            ),
-          ],
+        Expanded(
+          // android:background="@android:color/white"
+          child: ColoredBox(
+            color: demoChartBackground,
+            child: ChartHostWidget<BubbleChartView, BubbleData>(chart: _chart, data: _chart.data),
+          ),
         ),
-        const SizedBox(height: 14),
-        const Filler('Scroll area below the chart', height: 480),
+        DemoSeekBar(
+          progress: _seekBar1,
+          max: 100,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar1 = progress;
+            _onProgressChanged();
+          }),
+        ),
+        DemoSeekBar(
+          progress: _seekBar2,
+          max: 200,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar2 = progress;
+            _onProgressChanged();
+          }),
+        ),
       ],
     ),
   );
-}
-
-/// The Activity's chart, axis and legend settings on top of the Nightfall styling, with half an x unit of space before
-/// the first and after the last bubble, so a normalized bubble, at most one x unit wide, is not cut off at the edge.
-void _setup(BubbleChartView chart) {
-  nightfallSetup(chart);
-  chart.maxVisibleCount = 200;
-  chart.legend
-    ..verticalAlignment = LegendVerticalAlignment.TOP
-    ..horizontalAlignment = LegendHorizontalAlignment.RIGHT
-    ..orientation = LegendOrientation.VERTICAL
-    ..isDrawInsideEnabled = false;
-  chart.xAxis
-    ..spaceMin = 0.5
-    ..spaceMax = 0.5;
-  chart.axisLeft
-    ..spaceTop = 30
-    ..spaceBottom = 30
-    ..isDrawZeroLineEnabled = false;
-}
-
-/// Three data sets of [_count] bubbles from x 0, with values and sizes from 0 to [_range], as the Activity's
-/// onProgressChanged. In the first set the bubble at [bubbleChartZeroSizeX] has size 0 and the next one size 4, at the
-/// same y. The values depend on [seed] only, and every seed has the same shape, so switching between them animates.
-BubbleData bubbleChartData(int seed) {
-  final random = math.Random(seed);
-  final values1 = <BubbleEntry>[];
-  final values2 = <BubbleEntry>[];
-  final values3 = <BubbleEntry>[];
-  BubbleEntry bubble(int i) => BubbleEntry(
-    x: i.toDouble(),
-    y: random.nextDouble() * _range,
-    size: random.nextDouble() * _range,
-  );
-  for (var i = 0; i < _count; i++) {
-    values1.add(bubble(i));
-    values2.add(bubble(i));
-    values3.add(bubble(i));
-  }
-  values1[bubbleChartZeroSizeX].size = 0;
-  values1[bubbleChartZeroSizeX + 1]
-    ..size = 4
-    ..y = values1[bubbleChartZeroSizeX].y;
-
-  BubbleDataSet series(List<BubbleEntry> values, String label, Color color) =>
-      BubbleDataSet(values, label)
-        ..isDrawIconsEnabled = false
-        ..setColor(color, 130);
-
-  return BubbleData([
-      series(values1, 'DS 1', Nightfall.accent),
-      series(values2, 'DS 2', Nightfall.coral),
-      series(values3, 'DS 3', Nightfall.amber),
-    ])
-    ..setDrawValues(false)
-    ..setValueTextSize(8)
-    ..setValueTextColor(Nightfall.text)
-    ..setHighlightCircleWidth(1.5);
 }

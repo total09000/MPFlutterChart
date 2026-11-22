@@ -1,27 +1,16 @@
-// Other Charts / Candlestick (MPChartExample's CandleStickChartActivity): thirty candles in the Nightfall style, rising
-// candles hollow, falling ones filled and one flat candle in the neutral colour. The data is generated as the
-// Activity's onProgressChanged generates it, from a seeded Random, for 30 candles instead of the seek bar's 40; one
-// candle is made flat, since the Activity's even/odd scheme never produces an open equal to the close. The shadows are
-// in the muted colour instead of dark grey, which would not show on the card, and the value labels are off.
-import 'dart:math' as math;
-
-// Material has its own `Easing`; the chart's is MPAndroidChart's Easing.
+// Ported from MPChartExample: CandleStickChartActivity.kt, with res/layout/activity_candlechart.xml and
+// res/menu/candle.xml.
+//
+// Other Charts / Candlestick: random candles on a white chart, falling ones filled red and rising ones outlined green,
+// with a seek bar for the number of candles and one for their base value. Not ported: the "View on GitHub" and "Save
+// to Gallery" menu items (see notimportant/demo_base.dart).
 import 'package:flutter/material.dart' hide Easing;
 import 'package:mp_flutter_chart/mp_flutter_chart.dart';
 
-import '../design/nightfall.dart';
+import '../custom/demo_drawables.dart';
+import '../notimportant/demo_base.dart';
 
-/// Number of candles.
-const int _count = 30;
-
-/// Base of the values, the Activity's seekBar2 initial value plus one.
-const double _multi = 100 + 1;
-
-/// Index of the candle whose close is set to its open, so it is drawn in the neutral colour.
-const int _neutralIndex = 5;
-
-/// A [CandleStickChart] inside a [ListView], with buttons that drive it through a [ChartController] and toggle the
-/// candle bodies and the shadow colour.
+/// CandleStickChartActivity.
 class CandleStickChartPage extends StatefulWidget {
   const CandleStickChartPage({super.key});
 
@@ -29,153 +18,162 @@ class CandleStickChartPage extends StatefulWidget {
   State<CandleStickChartPage> createState() => _CandleStickChartPageState();
 }
 
-class _CandleStickChartPageState extends State<CandleStickChartPage> {
-  final ChartController _controller = ChartController();
-  int _seed = 0;
-  late CandleData _data = candleStickChartData(_seed);
-  bool _showCandleBar = true;
-  bool _shadowColorSameAsCandle = false;
+class _CandleStickChartPageState extends State<CandleStickChartPage> with DemoBase {
+  /// `binding.chart1`.
+  final CandleStickChartView _chart = CandleStickChartView();
+
+  /// `binding.seekBar1.progress`.
+  int _seekBar1 = 40;
+
+  /// `binding.seekBar2.progress`.
+  int _seekBar2 = 100;
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+
+    // setBackgroundColor(Color.WHITE) is the ColoredBox in build.
+    _chart
+      ..description.isEnabled = false
+      ..maxVisibleCount = 60
+      ..isPinchZoomEnabled = false
+      ..isDrawGridBackgroundEnabled = false;
+
+    _chart.xAxis
+      ..position = XAxisPosition.BOTTOM
+      ..isDrawGridLinesEnabled = false;
+
+    _chart.axisLeft
+      ..labelCount = 7
+      ..isDrawGridLinesEnabled = false
+      ..isDrawAxisLineEnabled = false;
+
+    _chart.axisRight.isEnabled = false;
+
+    // Setting the progress of the seek bars calls onProgressChanged, which sets the data.
+    _onProgressChanged();
+
+    _chart.legend.isEnabled = false;
   }
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Candlestick'),
-      backgroundColor: Nightfall.card,
-      foregroundColor: Nightfall.text,
-    ),
-    body: ListView(
-      dragStartBehavior: chartScrollDragStartBehavior,
-      padding: const EdgeInsets.all(14),
-      children: [
-        ChartCard(
-          title: 'Data Set',
-          subtitle: 'Drag, pinch or double-tap the chart; tap a candle',
-          children: [
-            SizedBox(
-              height: 300,
-              child: CandleStickChart(
-                data: _data,
-                controller: _controller,
-                animateChanges: true,
-                contentDescription: 'Candle stick chart with thirty candles',
-                marker: (entry, highlight) => Pill(_candleText(entry)),
-                setup: _setup,
-                update: (chart) {
-                  for (final set in _data.dataSets.cast<CandleDataSet>()) {
-                    set
-                      ..showCandleBar = _showCandleBar
-                      ..shadowColorSameAsCandle = _shadowColorSameAsCandle;
-                  }
-                },
-              ),
-            ),
-            StatusLine(_controller),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ExampleButton(
-                  'animateY',
-                  Nightfall.accent,
-                  () => _controller.animateY(1500),
-                ),
-                ExampleButton('zoomIn', Nightfall.coral, _controller.zoomIn),
-                ExampleButton(
-                  'fitScreen',
-                  Nightfall.amber,
-                  _controller.fitScreen,
-                ),
-                ExampleButton(
-                  'switch data',
-                  Nightfall.violet,
-                  () => setState(() => _data = candleStickChartData(++_seed)),
-                ),
-                ExampleButton(
-                  'toggle candle bar',
-                  Nightfall.green,
-                  () => setState(() => _showCandleBar = !_showCandleBar),
-                ),
-                ExampleButton(
-                  'toggle shadow colour',
-                  Nightfall.accent,
-                  () => setState(
-                    () => _shadowColorSameAsCandle = !_shadowColorSameAsCandle,
-                  ),
-                ),
-              ],
-            ),
-          ],
+  /// `onProgressChanged`: new random candles for the progress of the two seek bars.
+  void _onProgressChanged() {
+    final count = _seekBar1;
+
+    _chart.resetTracking();
+
+    final values = <CandleEntry>[];
+
+    for (var i = 0; i < count; i++) {
+      final multi = (_seekBar2 + 1).toDouble();
+      final value = mathRandom() * 40 + multi;
+
+      final high = mathRandom() * 9 + 8;
+      final low = mathRandom() * 9 + 8;
+
+      final open = mathRandom() * 6 + 1;
+      final close = mathRandom() * 6 + 1;
+
+      final even = i % 2 == 0;
+
+      values.add(
+        CandleEntry(
+          x: i.toDouble(),
+          high: value + high,
+          low: value - low,
+          open: even ? value + open : value - open,
+          close: even ? value - close : value + close,
+          icon: starDrawable,
         ),
-        const SizedBox(height: 14),
-        const Filler('Scroll area below the chart', height: 480),
+      );
+    }
+
+    final set1 = CandleDataSet(values, 'Data Set')
+      ..isDrawIconsEnabled = false
+      ..axisDependency = AxisDependency.LEFT
+      ..shadowColor = const Color(0xFF444444)
+      ..shadowWidth = 0.7
+      ..decreasingColor = const Color(0xFFFF0000)
+      ..decreasingPaintStyle = PaintStyle.FILL
+      ..increasingColor = const Color.fromARGB(255, 122, 242, 84)
+      ..increasingPaintStyle = PaintStyle.STROKE
+      ..neutralColor = const Color(0xFF0000FF);
+
+    final data = CandleData([set1]);
+
+    _chart.data = data;
+    _chart.invalidate();
+  }
+
+  /// res/menu/candle.xml.
+  List<DemoMenuItem> get _menu => [
+    DemoMenuItem('Toggle Values', () {
+      for (final set in _chart.data?.dataSets ?? const <ICandleDataSet>[]) {
+        set.isDrawValuesEnabled = !set.isDrawValuesEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Icons', () {
+      for (final set in _chart.data?.dataSets ?? const <ICandleDataSet>[]) {
+        set.isDrawIconsEnabled = !set.isDrawIconsEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Highlight', () {
+      final data = _chart.data;
+      if (data != null) {
+        data.isHighlightEnabled = !data.isHighlightEnabled;
+        _chart.invalidate();
+      }
+    }),
+    DemoMenuItem('Toggle Shadow Color', () {
+      for (final set in _chart.data?.dataSets ?? const <ICandleDataSet>[]) {
+        (set as CandleDataSet).shadowColorSameAsCandle = !set.shadowColorSameAsCandle;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle PinchZoom', () {
+      _chart.isPinchZoomEnabled = !_chart.isPinchZoomEnabled;
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Auto Scale', () {
+      _chart.isAutoScaleMinMaxEnabled = !_chart.isAutoScaleMinMaxEnabled;
+      _chart.notifyDataSetChanged();
+    }),
+    DemoMenuItem('Animate X', () => _chart.animateX(2000)),
+    DemoMenuItem('Animate Y', () => _chart.animateY(2000)),
+    DemoMenuItem('Animate XY', () => _chart.animateXY(2000, 2000)),
+  ];
+
+  @override
+  Widget build(BuildContext context) => DemoScaffold(
+    title: 'Candlestick',
+    menu: _menu,
+    body: Column(
+      children: [
+        Expanded(
+          child: ColoredBox(
+            color: demoChartBackground,
+            child: ChartHostWidget<CandleStickChartView, CandleData>(chart: _chart, data: _chart.data),
+          ),
+        ),
+        DemoSeekBar(
+          progress: _seekBar1,
+          max: 3000,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar1 = progress;
+            _onProgressChanged();
+          }),
+        ),
+        DemoSeekBar(
+          progress: _seekBar2,
+          max: 200,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar2 = progress;
+            _onProgressChanged();
+          }),
+        ),
       ],
     ),
   );
-}
-
-/// Open, high, low and close of the highlighted candle.
-String _candleText(Entry entry) {
-  if (entry is! CandleEntry) return entry.y.toStringAsFixed(1);
-  return 'O ${entry.open.toStringAsFixed(1)} · H ${entry.high.toStringAsFixed(1)}'
-      ' · L ${entry.low.toStringAsFixed(1)} · C ${entry.close.toStringAsFixed(1)}';
-}
-
-/// The Activity's chart and axis settings on top of the Nightfall styling.
-void _setup(CandleStickChartView chart) {
-  nightfallSetup(chart);
-  chart.maxVisibleCount = 60;
-  chart.axisLeft.labelCount = 7;
-}
-
-/// [_count] candles from x 0, as the Activity's onProgressChanged: even candles fall from open to close, odd ones rise,
-/// and the candle at [_neutralIndex] closes at its open. The values depend on [seed] only, and every seed has the same
-/// shape, so switching between them animates.
-CandleData candleStickChartData(int seed) {
-  final random = math.Random(seed);
-  final values = <CandleEntry>[];
-  for (var i = 0; i < _count; i++) {
-    final value = random.nextDouble() * 40 + _multi;
-
-    final high = random.nextDouble() * 9 + 8;
-    final low = random.nextDouble() * 9 + 8;
-
-    final open = random.nextDouble() * 6 + 1;
-    final close = random.nextDouble() * 6 + 1;
-
-    final even = i % 2 == 0;
-    final openValue = even ? value + open : value - open;
-    final closeValue = even ? value - close : value + close;
-
-    values.add(
-      CandleEntry(
-        x: i.toDouble(),
-        high: value + high,
-        low: value - low,
-        open: openValue,
-        close: i == _neutralIndex ? openValue : closeValue,
-      ),
-    );
-  }
-
-  final set1 = CandleDataSet(values, 'Data Set')
-    ..isDrawIconsEnabled = false
-    ..axisDependency = AxisDependency.LEFT
-    ..shadowColor = Nightfall.muted
-    ..shadowWidth = 1
-    ..decreasingColor = Nightfall.coral
-    ..decreasingPaintStyle = PaintStyle.FILL
-    ..increasingColor = Nightfall.green
-    ..increasingPaintStyle = PaintStyle.STROKE
-    ..neutralColor = Nightfall.amber
-    ..isDrawValuesEnabled = false
-    ..highlightColor = Nightfall.text
-    ..highlightLineWidth = 1;
-
-  return CandleData([set1]);
 }

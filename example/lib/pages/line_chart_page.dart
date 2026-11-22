@@ -1,18 +1,17 @@
-// Line Charts / Basic (MPChartExample's LineChartActivity1): a LineChart in a ListView with three
-// data sets in the Nightfall style. The chart keeps drag, zoom and double-tap zoom enabled so the page can be used to
-// try the gestures inside a scrolling list.
-import 'dart:math' as math;
-
-// Material has its own `Easing`; the chart's is MPAndroidChart's Easing.
+// Ported from MPChartExample: LineChartActivity1.kt, with res/layout/activity_linechart.xml and res/menu/line.xml.
+//
+// Line Charts / Basic: one dashed black line of random values filled with the fade_red gradient down to the axis
+// minimum, two dashed limit lines, a dashed grid and MyMarkerView, with a seek bar for the number of entries and one
+// for their range. Not ported: the "View on GitHub" and "Save to Gallery" menu items (see
+// notimportant/demo_base.dart).
 import 'package:flutter/material.dart' hide Easing;
 import 'package:mp_flutter_chart/mp_flutter_chart.dart';
 
-import '../design/nightfall.dart';
+import '../custom/demo_drawables.dart';
+import '../custom/my_marker_view.dart';
+import '../notimportant/demo_base.dart';
 
-/// Entries per data set.
-const int _pointCount = 24;
-
-/// A [LineChart] with three data sets inside a [ListView], with buttons that drive it through a [ChartController].
+/// LineChartActivity1.
 class LineChartPage extends StatefulWidget {
   const LineChartPage({super.key});
 
@@ -20,138 +19,225 @@ class LineChartPage extends StatefulWidget {
   State<LineChartPage> createState() => _LineChartPageState();
 }
 
-class _LineChartPageState extends State<LineChartPage> {
-  final ChartController _controller = ChartController();
-  int _seed = 0;
-  late LineData _data = _lineData(_seed);
+class _LineChartPageState extends State<LineChartPage> with DemoBase {
+  /// `binding.chart1`.
+  final LineChartView _chart = LineChartView();
+
+  /// `lineSet`: the data set setData creates once and then gives new entries.
+  LineDataSet? _lineSet;
+
+  /// `binding.seekBar1.progress`.
+  int _seekBar1 = 45;
+
+  /// `binding.seekBar2.progress`.
+  int _seekBar2 = 180;
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+
+    final mv = MyMarkerView()..chartView = _chart;
+    _chart
+      ..description.isEnabled = false
+      ..isTouchEnabled = true
+      ..onChartValueSelectedListener = OnChartValueSelectedListener.fromFunction(
+        onValueSelected: (entry, _) {
+          logI('Entry<*> selected', entry.toString());
+          logI('LOW HIGH', 'low: ${_chart.lowestVisibleX}, high: ${_chart.highestVisibleX}');
+          logI(
+            'MIN MAX',
+            'xMin: ${_chart.xChartMin}, xMax: ${_chart.xChartMax}, '
+                'yMin: ${_chart.yChartMin}, yMax: ${_chart.yChartMax}',
+          );
+        },
+        onNothingSelected: () => logI('Nothing selected', 'Nothing selected.'),
+      )
+      ..isDrawGridBackgroundEnabled = false
+      ..marker = mv
+      ..isDragEnabled = true
+      ..isScaleEnabled = true
+      ..isPinchZoomEnabled = true;
+
+    final xAxis = _chart.xAxis..enableGridDashedLine(10, 10, 0);
+
+    final yAxis = _chart.axisLeft;
+    _chart.axisRight.isEnabled = false;
+    yAxis
+      ..enableGridDashedLine(10, 10, 0)
+      ..axisMaximum = 200
+      ..axisMinimum = -50;
+
+    final ll1 = LimitLine(150, 'Upper Limit')
+      ..lineWidth = 4
+      ..enableDashedLine(10, 10, 0)
+      ..labelPosition = LimitLabelPosition.RIGHT_TOP
+      ..textSize = 10
+      ..typeface = tfRegular;
+
+    final ll2 = LimitLine(-30, 'Lower Limit')
+      ..lineWidth = 4
+      ..enableDashedLine(10, 10, 0)
+      ..labelPosition = LimitLabelPosition.RIGHT_BOTTOM
+      ..textSize = 10
+      ..typeface = tfRegular;
+
+    yAxis.isDrawLimitLinesBehindDataEnabled = true;
+    xAxis.isDrawLimitLinesBehindDataEnabled = true;
+
+    yAxis
+      ..addLimitLine(ll1)
+      ..addLimitLine(ll2);
+
+    // Setting the progress of the seek bars calls onProgressChanged, and onCreate calls setData(45, 180f) itself;
+    // each call ends with the same data shape, so one call loads it here. animateX(1500) is in the host's setup.
+    _setData(_seekBar1, _seekBar2.toDouble());
+
+    _chart.legend.form = LegendForm.LINE;
   }
 
-  void _switchData() => setState(() => _data = _lineData(++_seed));
+  /// `setData(count, range)`.
+  void _setData(int count, double range) {
+    final values = <Entry>[];
+
+    for (var i = 0; i < count; i++) {
+      final value = mathRandom() * range - 30;
+      values.add(Entry(x: i.toDouble(), y: value, icon: starDrawable));
+    }
+
+    final existing = _lineSet;
+    if (existing != null) {
+      existing.entries = values;
+      _chart.notifyDataSetChanged();
+    } else {
+      final set1 = LineDataSet(values, 'DataSet 1')
+        ..isDrawIconsEnabled = false
+        ..enableDashedLine(10, 5, 0)
+        ..color = const Color(0xFF000000)
+        ..circleColor = const Color(0xFF000000)
+        ..lineWidth = 1
+        ..circleRadius = 3
+        ..isDrawCircleHoleEnabled = false
+        ..formLineWidth = 1
+        ..formLineDashEffect = DashPathEffect([10, 5], 0)
+        ..formSize = 15
+        ..valueTextSize = 9
+        ..enableDashedHighlightLine(10, 5, 0)
+        ..isDrawFilledEnabled = true
+        ..fillFormatter = IFillFormatter.fromFunction((_, _) => _chart.axisLeft.axisMinimum)
+        ..fillDrawable = fadeRedDrawable;
+
+      _lineSet = set1;
+      _chart.data = LineData([set1]);
+    }
+  }
+
+  /// `onProgressChanged`: the texts follow the seek bars, then new data for their progress.
+  void _onProgressChanged() {
+    _setData(_seekBar1, _seekBar2.toDouble());
+    _chart.invalidate();
+  }
+
+  Iterable<LineDataSet> get _lineDataSets => _chart.data?.dataSets.whereType<LineDataSet>() ?? const [];
+
+  void _toggleMode(LineDataSetMode mode) {
+    for (final set in _lineDataSets) {
+      set.mode = set.mode == mode ? LineDataSetMode.LINEAR : mode;
+    }
+    _chart.invalidate();
+  }
+
+  /// res/menu/line.xml.
+  List<DemoMenuItem> get _menu => [
+    DemoMenuItem('Toggle Values', () {
+      for (final set in _chart.data?.dataSets ?? const <ILineDataSet>[]) {
+        set.isDrawValuesEnabled = !set.isDrawValuesEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Highlight Line Span', () {
+      for (final set in _lineDataSets) {
+        set.verticalHighlightIndicatorSpan = switch (set.verticalHighlightIndicatorSpan) {
+          HighlightLineSpan.FULL => HighlightLineSpan.TO_ENTRY,
+          HighlightLineSpan.TO_ENTRY => HighlightLineSpan.FROM_ENTRY,
+          HighlightLineSpan.FROM_ENTRY => HighlightLineSpan.FULL,
+        };
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Icons', () {
+      for (final set in _chart.data?.dataSets ?? const <ILineDataSet>[]) {
+        set.isDrawIconsEnabled = !set.isDrawIconsEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Filled', () {
+      for (final set in _chart.data?.dataSets ?? const <ILineDataSet>[]) {
+        set.isDrawFilledEnabled = !set.isDrawFilledEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Circles', () {
+      for (final set in _lineDataSets) {
+        set.isDrawCirclesEnabled = !set.isDrawCirclesEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Cubic', () => _toggleMode(LineDataSetMode.CUBIC_BEZIER)),
+    DemoMenuItem('Toggle Stepped', () => _toggleMode(LineDataSetMode.STEPPED)),
+    DemoMenuItem('Toggle Horizontal Cubic', () => _toggleMode(LineDataSetMode.HORIZONTAL_BEZIER)),
+    DemoMenuItem('Toggle PinchZoom', () {
+      _chart.isPinchZoomEnabled = !_chart.isPinchZoomEnabled;
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Auto Scale', () {
+      _chart.isAutoScaleMinMaxEnabled = !_chart.isAutoScaleMinMaxEnabled;
+      _chart.notifyDataSetChanged();
+    }),
+    DemoMenuItem('Toggle Highlight', () {
+      final data = _chart.data;
+      if (data != null) {
+        data.isHighlightEnabled = !data.isHighlightEnabled;
+        _chart.invalidate();
+      }
+    }),
+    DemoMenuItem('Animate X', () => _chart.animateX(2000)),
+    DemoMenuItem('Animate Y', () => _chart.animateY(2000, easing: Easing.EaseInCubic)),
+    DemoMenuItem('Animate XY', () => _chart.animateXY(2000, 2000)),
+  ];
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Basic'),
-      backgroundColor: Nightfall.card,
-      foregroundColor: Nightfall.text,
-    ),
-    body: ListView(
-      dragStartBehavior: chartScrollDragStartBehavior,
-      padding: const EdgeInsets.all(14),
+  Widget build(BuildContext context) => DemoScaffold(
+    title: 'Basic',
+    menu: _menu,
+    body: Column(
       children: [
-        const Filler('Scroll area above the chart', height: 160),
-        const SizedBox(height: 14),
-        ChartCard(
-          title: 'Three series',
-          subtitle: 'Drag, pinch or double-tap the chart; tap a point',
-          children: [
-            SizedBox(
-              height: 300,
-              child: LineChart(
-                data: _data,
-                controller: _controller,
-                animateChanges: true,
-                contentDescription: 'Line chart with three series',
-                marker: (entry, highlight) => Pill(
-                  '${_data.getDataSetByIndex(highlight.dataSetIndex)?.label ?? ''}'
-                  ' · x ${entry.x.toStringAsFixed(0)} · ${entry.y.toStringAsFixed(1)}',
-                ),
-                setup: _setup,
-              ),
+        Expanded(
+          child: ColoredBox(
+            color: demoChartBackground,
+            child: ChartHostWidget<LineChartView, LineData>(
+              chart: _chart,
+              data: _chart.data,
+              setup: (chart) => chart.animateX(1500),
             ),
-            StatusLine(_controller),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ExampleButton(
-                  'animateX',
-                  Nightfall.accent,
-                  () => _controller.animateX(1500),
-                ),
-                ExampleButton('zoomIn', Nightfall.coral, _controller.zoomIn),
-                ExampleButton(
-                  'fitScreen',
-                  Nightfall.amber,
-                  _controller.fitScreen,
-                ),
-                ExampleButton('switch data', Nightfall.violet, _switchData),
-              ],
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 14),
-        const Filler('Scroll area below the chart', height: 320),
-        const SizedBox(height: 14),
-        const Filler('End of the list', height: 320),
+        DemoSeekBar(
+          progress: _seekBar1,
+          max: 500,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar1 = progress;
+            _onProgressChanged();
+          }),
+        ),
+        DemoSeekBar(
+          progress: _seekBar2,
+          max: 180,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar2 = progress;
+            _onProgressChanged();
+          }),
+        ),
       ],
     ),
   );
-}
-
-/// The shared Nightfall styling with line-shaped legend forms.
-void _setup(LineChartView chart) {
-  nightfallSetup(chart);
-  chart.legend.form = LegendForm.LINE;
-}
-
-/// Three series of [_pointCount] entries with values that depend on [seed] only; every seed has the same shape, so
-/// switching between them animates.
-LineData _lineData(int seed) {
-  final random = math.Random(seed);
-  List<Entry> walk(double start, double step) {
-    var y = start;
-    return [
-      for (var x = 0; x < _pointCount; x++)
-        Entry(
-          x: x.toDouble(),
-          y: y = (y + (random.nextDouble() - 0.5) * step).clamp(5, 95),
-        ),
-    ];
-  }
-
-  final revenue = LineDataSet(walk(60, 18), 'Revenue')
-    ..mode = LineDataSetMode.CUBIC_BEZIER
-    ..cubicIntensity = 0.18
-    ..color = Nightfall.accent
-    ..lineWidth = 3
-    ..isDrawCirclesEnabled = false
-    ..isDrawValuesEnabled = false
-    ..isDrawFilledEnabled = true
-    ..fillColor = Nightfall.accent
-    ..fillAlpha = 60
-    ..highlightColor = Nightfall.accent
-    ..highlightLineWidth = 1
-    ..isHorizontalHighlightIndicatorEnabled = false
-    ..isDrawHighlightCircleEnabled = true
-    ..circleHoleColor = Nightfall.card
-    ..enableDashedHighlightLine(8, 8, 0);
-
-  final orders = LineDataSet(walk(40, 22), 'Orders')
-    ..mode = LineDataSetMode.LINEAR
-    ..color = Nightfall.coral
-    ..lineWidth = 2
-    ..circleColor = Nightfall.coral
-    ..circleRadius = 3.5
-    ..circleHoleRadius = 1.8
-    ..circleHoleColor = Nightfall.card
-    ..isDrawValuesEnabled = false
-    ..highlightColor = Nightfall.coral
-    ..highlightLineWidth = 1;
-
-  final visits = LineDataSet(walk(25, 14), 'Visits')
-    ..mode = LineDataSetMode.HORIZONTAL_BEZIER
-    ..color = Nightfall.violet
-    ..lineWidth = 2
-    ..isDrawCirclesEnabled = false
-    ..isDrawValuesEnabled = false
-    ..highlightColor = Nightfall.violet
-    ..highlightLineWidth = 1;
-
-  return LineData([revenue, orders, visits]);
 }

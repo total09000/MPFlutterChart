@@ -11,6 +11,10 @@ MIGRATION.md.
 The glyph extents in lib/src/graphics/roboto_glyph_extents.dart are derived
 from the Roboto font (Apache License 2.0, Google).
 
+The example app (example/assets/fonts) includes the Open Sans fonts
+(Copyright 2010-2011 Google Corporation, Apache License 2.0), as
+MPChartExample does.
+
 The original NOTICE of MPAndroidChart follows.
 
 ----------------------------------------------------------------------------

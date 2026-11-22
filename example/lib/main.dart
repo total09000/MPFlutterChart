@@ -48,7 +48,7 @@ Route<void>? _onGenerateRoute(RouteSettings settings) {
 }
 
 /// The list of [examplePages]: a section is a centred header, an entry its name and description; tapping an entry
-/// opens its page.
+/// opens its page. The row of an entry has its index in [examplePages] as its key.
 class _HomePage extends StatelessWidget {
   const _HomePage();
 
@@ -70,7 +70,9 @@ class _HomePage extends StatelessWidget {
             style: const TextStyle(color: Nightfall.accent, fontSize: 21),
           ),
         ),
+        // The key tells apart two entries with the same text: both Multiple entries say "Show multiple data sets.".
         DemoEntry(:final name, :final description, :final builder) => ListTile(
+          key: ValueKey<int>(index),
           title: Text(name, style: const TextStyle(color: Nightfall.text)),
           subtitle: Text(
             description,

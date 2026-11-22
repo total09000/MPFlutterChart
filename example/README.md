@@ -1,24 +1,51 @@
 # mp_flutter_chart_example
 
 Example app of `mp_flutter_chart`: a home list with the sections and entries of MPChartExample's `MainActivity`
-(`lib/pages.dart`), each entry opening one page.
+(`lib/pages.dart`), each entry opening the port of its Activity.
 
-- **All chart types / Dark style and Light style** open the port of MPChartExample's `DesignActivity`
-  (`lib/pages/design_page.dart`): one card for each chart type ported so far (`lib/design/design_charts.dart`), in the
-  dark or light Nightfall style (`lib/design/nightfall.dart`, `lib/design/nightfall_style.dart`), laid out in whole
-  device px as Android lays out the card's XML (`lib/design/android_metrics.dart`). The line and bar cards highlight a
-  value with a pill marker (`lib/custom/pill_marker_view.dart`), and the overflow menu swaps the variant. The cards'
-  data is DesignCharts.kt's: fixed values, or `KotlinRandom`, Kotlin's `Random(seed)`, with its seeds, so the cards show
-  the Android app's numbers.
-- **Line Charts / Basic; Bar Charts / Basic, Multiple, Horizontal and Stacked; Pie Charts / Basic; Other Charts /
-  Scatter Plot, Bubble Chart, Candlestick and Radar Chart** each open a page in the dark Nightfall style of
-  MPChartExample (`lib/design/nightfall.dart`, `lib/pages/<name>_page.dart`). Each page shows its chart inside a
-  `ListView` with a widget marker, a status line from the `ChartController`, and buttons for an animation, `zoomIn`,
-  `fitScreen`, an animated data switch (`animateChanges: true`) and the page's own toggles. The data comes from seeded
-  random generators, so every run shows the same charts. The pie and radar pages (`lib/pages/pie_chart_page.dart`,
-  `lib/pages/radar_chart_page.dart`) differ: their status line is their own text with the chart's rotation and
-  selection, the pie page has a Spin button and switches for a half pie and for values outside the slices, the radar
-  page an Animate button, in place of the zoom and data buttons, and their data is fixed.
+| Section | Entries | Activities |
+| --- | --- | --- |
+| All chart types | Dark style, Light style | `DesignActivity` |
+| Jetpack Compose | Compose, Compose list | `ComposeChartActivity`, `ComposeListActivity` |
+| Performance | Line chart, Bar chart | `LinePerformanceActivity`, `BarPerformanceActivity` |
+| Line Charts | Basic, Multiple, Dual Axis, Inverted Axis, Cubic, Colorful, Performance, Filled | `LineChartActivity1`, `MultiLineChartActivity`, `LineChartActivity2`, `InvertedLineChartActivity`, `CubicLineChartActivity`, `LineChartActivityColored`, `PerformanceLineChart`, `FilledLineActivity` |
+| Bar Charts | Basic, Basic 2, Multiple, Horizontal, Stacked, Negative, Negative Horizontal, Stacked 2, Sine, Custom renderer | `BarChartActivity`, `AnotherBarActivity`, `BarChartActivityMultiDataset`, `HorizontalBarChartActivity`, `StackedBarActivity`, `BarChartPositiveNegative`, `HorizontalBarNegativeChartActivity`, `StackedBarActivityNegative`, `BarChartActivitySinus`, `CustomRendererActivity` |
+| Pie Charts | Basic, Value Lines, Half Pie | `PieChartActivity`, `PiePolylineChartActivity`, `HalfPieChartActivity` |
+| Other Charts | Scatter Plot, Bubble Chart, Candlestick, Radar Chart | `ScatterChartActivity`, `BubbleChartActivity`, `CandleStickChartActivity`, `RadarChartActivity` |
+| Scrolling Charts | Multiple, View Pager, Tall Bar Chart, Many Bar Charts | `ListViewMultiChartActivity`, `SimpleChartDemo`, `ScrollViewActivity`, `ListViewBarChartActivity` |
+| Even More Line Charts | Dynamic, Realtime, Hourly | `DynamicalAddingActivity`, `RealtimeLineChartActivity`, `LineChartTime` |
+| Animation | All animations, Animated data changes | `AnimationPlaygroundActivity`, `AnimatedChangesActivity` |
+
+Two of MainActivity's 42 entries have no page: **Other Charts / Combined Chart**, because `CombinedChart` is not
+ported yet, and **Line Charts / From Java**, the Basic line chart written in Java, which has no counterpart in a Dart
+package. `MIGRATION.md` ("Example app") lists how the pages differ from their Activities.
+
+## How the pages are built
+
+- **All chart types** is the port of `DesignActivity` (`lib/pages/design_page.dart`): one card for each chart type
+  ported so far (`lib/design/design_charts.dart`), in the dark or light Nightfall style (`lib/design/nightfall.dart`,
+  `lib/design/nightfall_style.dart`), laid out in whole device px as Android lays out the card's XML
+  (`lib/design/android_metrics.dart`). The line and bar cards highlight a value with a pill marker
+  (`lib/custom/pill_marker_view.dart`), and the overflow menu swaps the variant. The cards' data is DesignCharts.kt's:
+  fixed values, or `KotlinRandom`, Kotlin's `Random(seed)`, with its seeds, so the cards show the Android app's
+  numbers.
+- **Every other page** is `lib/pages/<activity>_page.dart`, a port of the Activity named in its header comment,
+  built on `lib/notimportant/demo_base.dart`, the port of `DemoBase`. The page owns its chart (a `LineChartView`,
+  `BarChartView`, …), configures it in `initState` as the Activity does in `onCreate`, and shows it with a
+  `ChartHostWidget`. The Activity's options menu is the overflow menu of the page, its SeekBars are sliders with
+  their value beside them, and its other controls are the matching Material widgets. The two **Jetpack Compose** pages
+  are built on the chart widgets (`LineChart`, `BarChart`, `PieChart`, …) and `ChartController`, the ports of
+  MPChartCompose's composables and `rememberChartState()`.
+- **Data.** Where an Activity calls `Math.random()`, the page draws from a generator with a fixed seed
+  (`DemoBase.random`), so every run of a page shows the same charts; where it seeds Kotlin's `Random` itself, the page
+  uses `KotlinRandom` with the same seed and shows Android's numbers. The point files of MPChartExample's assets that
+  the pages read are in `assets/`.
+- **Shared pieces** keep their Kotlin places: `lib/custom/` has the markers (`MyMarkerView`, `XYMarkerView`,
+  `StackedBarsMarkerView`, `RadarMarkerView`, drawn on the chart canvas), the value and axis formatters, the badge bar
+  renderer and the timed charts of the Performance pages; `lib/fragments/` the pages of the View Pager entry;
+  `lib/listviewitems/` the rows of Scrolling Charts / Multiple.
+- **Third-party files.** `assets/fonts/` holds the Open Sans faces MPChartExample ships and its charts use (Light,
+  Regular and Bold; Apache License 2.0), and `assets/*.txt` are MPChartExample's point files.
 
 Run it with Flutter, or for HarmonyOS with the OpenHarmony Flutter SDK through `../tool/flutter.sh` (see the
 package README):

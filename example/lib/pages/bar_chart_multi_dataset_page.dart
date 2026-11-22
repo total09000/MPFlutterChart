@@ -1,188 +1,209 @@
-// Bar Charts / Multiple (MPChartExample's BarChartActivityMultiDataset): two data sets whose bars are grouped side by
-// side, one group per year, in the Nightfall style. The data is generated as the Activity's onProgressChanged
-// generates it at the seek bars' initial values, from a seeded Random, with two companies instead of four; the bar
-// width is chosen so a group is one x unit wide, as the Activity's four bars of 0.2 are. The value labels are off, as
-// in Nightfall's bars: 22 labels do not fit above bars this narrow on a phone.
-import 'dart:math' as math;
-
-// Material has its own `Easing`; the chart's is MPAndroidChart's Easing.
+// Ported from MPChartExample: BarChartActivityMultiDataset.kt, with res/layout/activity_barchart.xml and
+// res/menu/bar.xml.
+//
+// Bar Charts / Multiple: four companies' bars grouped side by side, one group per year from 1980, with large values
+// (LargeValueFormatter) and MyMarkerView, a seek bar for the number of years and one for the range of the values.
+// Not ported: the "View on GitHub" and "Save to Gallery" menu items (see notimportant/demo_base.dart).
 import 'package:flutter/material.dart' hide Easing;
 import 'package:mp_flutter_chart/mp_flutter_chart.dart';
 
-import '../design/nightfall.dart';
+import '../custom/my_marker_view.dart';
+import '../notimportant/demo_base.dart';
 
-/// Number of groups, the Activity's seekBar1 initial value plus one.
-const int _groupCount = 11;
-
-/// x value of the first group.
-const int _startYear = 1980;
-
-/// Upper end of the values, the Activity's seekBar2 initial value times 100000.
-const double _randomMultiplier = 100 * 100000;
-
-const double _groupSpace = 0.08;
-const double _barSpace = 0.03;
-
-/// (0.43 + 0.03) * 2 + 0.08 = 1, the width of a group.
-const double _barWidth = 0.43;
-
-/// A [BarChart] of two grouped data sets inside a [ListView], with buttons that drive it through a [ChartController]
-/// and toggle the bar shadow and the rounded bar corners.
+/// BarChartActivityMultiDataset.
 class BarChartMultiDatasetPage extends StatefulWidget {
   const BarChartMultiDatasetPage({super.key});
 
   @override
-  State<BarChartMultiDatasetPage> createState() =>
-      _BarChartMultiDatasetPageState();
+  State<BarChartMultiDatasetPage> createState() => _BarChartMultiDatasetPageState();
 }
 
-class _BarChartMultiDatasetPageState extends State<BarChartMultiDatasetPage> {
-  final ChartController _controller = ChartController();
-  int _seed = 0;
-  late BarData _data = barChartMultiDatasetData(_seed);
-  bool _shadow = false;
-  bool _rounded = true;
+class _BarChartMultiDatasetPageState extends State<BarChartMultiDatasetPage> with DemoBase {
+  /// `binding.chart1`.
+  final BarChartView _chart = BarChartView();
+
+  /// `barSets`: the four data sets onProgressChanged creates once and then gives new entries.
+  List<BarDataSet> _barSets = const [];
+
+  /// `binding.seekBar1.progress`.
+  int _seekBar1 = 10;
+
+  /// `binding.seekBar2.progress`.
+  int _seekBar2 = 100;
+
+  /// `binding.tvXMax.text`.
+  String _tvXMax = '-';
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+
+    final mv = MyMarkerView()..chartView = _chart;
+    _chart
+      ..onChartValueSelectedListener = OnChartValueSelectedListener.fromFunction(
+        onValueSelected: (e, h) => logI('Activity', 'Selected: $e, dataSet: ${h.dataSetIndex}'),
+        onNothingSelected: () => logI('Activity', 'Nothing selected.'),
+      )
+      ..description.isEnabled = false
+      ..isPinchZoomEnabled = false
+      ..isDrawBarShadowEnabled = false
+      ..isDrawGridBackgroundEnabled = false
+      ..marker = mv;
+
+    // Setting the progress of the seek bars calls onProgressChanged, which sets the data.
+    _onProgressChanged();
+
+    _chart.legend
+      ..verticalAlignment = LegendVerticalAlignment.TOP
+      ..horizontalAlignment = LegendHorizontalAlignment.RIGHT
+      ..orientation = LegendOrientation.VERTICAL
+      ..isDrawInsideEnabled = true
+      ..typeface = tfLight
+      ..yOffset = 0
+      ..xOffset = 10
+      ..yEntrySpace = 0
+      ..textSize = 8;
+
+    _chart.xAxis
+      ..typeface = tfLight
+      ..granularity = 1
+      ..isCenterAxisLabelsEnabled = true
+      ..valueFormatter = IAxisValueFormatter.fromFunction((value, _) => value.toInt().toString());
+
+    _chart.axisLeft
+      ..typeface = tfLight
+      ..valueFormatter = LargeValueFormatter()
+      ..isDrawGridLinesEnabled = false
+      ..spaceTop = 35
+      ..axisMinimum = 0;
+
+    _chart.axisRight.isEnabled = false;
   }
 
+  /// `onProgressChanged`: a group of four bars per year for the progress of the two seek bars.
+  void _onProgressChanged() {
+    const groupSpace = 0.08;
+    const barSpace = 0.03;
+    const barWidth = 0.2;
+
+    final groupCount = _seekBar1 + 1;
+    const startYear = 1980;
+    final endYear = startYear + groupCount;
+
+    _tvXMax = '$startYear-$endYear';
+
+    final values1 = <BarEntry>[];
+    final values2 = <BarEntry>[];
+    final values3 = <BarEntry>[];
+    final values4 = <BarEntry>[];
+
+    final randomMultiplier = _seekBar2 * 100000.0;
+
+    for (var i = startYear; i < endYear; i++) {
+      values1.add(BarEntry(x: i.toDouble(), y: mathRandom() * randomMultiplier));
+      values2.add(BarEntry(x: i.toDouble(), y: mathRandom() * randomMultiplier));
+      values3.add(BarEntry(x: i.toDouble(), y: mathRandom() * randomMultiplier));
+      values4.add(BarEntry(x: i.toDouble(), y: mathRandom() * randomMultiplier));
+    }
+
+    final chart = _chart;
+    if (_barSets.isNotEmpty) {
+      _barSets[0].entries = values1;
+      _barSets[1].entries = values2;
+      _barSets[2].entries = values3;
+      _barSets[3].entries = values4;
+      chart.notifyDataSetChanged();
+    } else {
+      final set1 = BarDataSet(values1, 'Company A')..color = const Color.fromARGB(255, 104, 241, 175);
+      final set2 = BarDataSet(values2, 'Company B')..color = const Color.fromARGB(255, 164, 228, 251);
+      final set3 = BarDataSet(values3, 'Company C')..color = const Color.fromARGB(255, 242, 247, 158);
+      final set4 = BarDataSet(values4, 'Company D')..color = const Color.fromARGB(255, 255, 102, 0);
+
+      final data = BarData([set1, set2, set3, set4])
+        ..setValueFormatter(LargeValueFormatter())
+        ..setValueTypeface(tfLight);
+
+      _barSets = [set1, set2, set3, set4];
+      chart.data = data;
+    }
+
+    final barData = chart.barData;
+    if (barData == null) return;
+    barData.barWidth = barWidth;
+
+    chart.xAxis.axisMinimum = startYear.toDouble();
+    chart.xAxis.axisMaximum = startYear + barData.getGroupWidth(groupSpace, barSpace) * groupCount;
+    chart.groupBars(startYear.toDouble(), groupSpace, barSpace);
+    chart.invalidate();
+  }
+
+  /// res/menu/bar.xml; "Toggle Rounded Sections" and "Toggle Icons" have no branch in `onOptionsItemSelected` and do
+  /// nothing.
+  List<DemoMenuItem> get _menu => [
+    DemoMenuItem('Toggle Bar Borders', () {
+      for (final set in _chart.data?.dataSets ?? const <IBarDataSet>[]) {
+        (set as BarDataSet).barBorderWidth = set.barBorderWidth == 1 ? 0 : 1;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Rounded Sections', () {}),
+    DemoMenuItem('Toggle Values', () {
+      for (final set in _chart.data?.dataSets ?? const <IBarDataSet>[]) {
+        set.isDrawValuesEnabled = !set.isDrawValuesEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Icons', () {}),
+    DemoMenuItem('Toggle Highlight', () {
+      final data = _chart.data;
+      if (data != null) {
+        data.isHighlightEnabled = !data.isHighlightEnabled;
+        _chart.invalidate();
+      }
+    }),
+    DemoMenuItem('Toggle PinchZoom', () {
+      _chart.isPinchZoomEnabled = !_chart.isPinchZoomEnabled;
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Auto Scale', () {
+      _chart.isAutoScaleMinMaxEnabled = !_chart.isAutoScaleMinMaxEnabled;
+      _chart.notifyDataSetChanged();
+    }),
+    DemoMenuItem('Animate X', () => _chart.animateX(2000)),
+    DemoMenuItem('Animate Y', () => _chart.animateY(2000)),
+    DemoMenuItem('Animate XY', () => _chart.animateXY(2000, 2000)),
+  ];
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Multiple'),
-      backgroundColor: Nightfall.card,
-      foregroundColor: Nightfall.text,
-    ),
-    body: ListView(
-      dragStartBehavior: chartScrollDragStartBehavior,
-      padding: const EdgeInsets.all(14),
+  Widget build(BuildContext context) => DemoScaffold(
+    title: 'Multiple',
+    menu: _menu,
+    body: Column(
       children: [
-        ChartCard(
-          title: 'Two companies, grouped by year',
-          subtitle: 'Drag, pinch or double-tap the chart; tap a bar',
-          children: [
-            SizedBox(
-              height: 300,
-              child: BarChart(
-                data: _data,
-                controller: _controller,
-                animateChanges: true,
-                contentDescription: 'Bar chart with two grouped data sets',
-                marker: (entry, highlight) => Pill(
-                  '${_data.getDataSetByIndex(highlight.dataSetIndex)?.label ?? ''}'
-                  ' · ${(entry.y / 1000000).toStringAsFixed(2)}m',
-                ),
-                setup: _setup,
-                update: (chart) {
-                  chart.isDrawBarShadowEnabled = _shadow;
-                  for (final set in _data.dataSets.cast<BarDataSet>()) {
-                    set.barCornerRadius = _rounded ? 7 : 0;
-                  }
-                },
-              ),
-            ),
-            StatusLine(_controller),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ExampleButton(
-                  'animateY',
-                  Nightfall.accent,
-                  () => _controller.animateY(1500),
-                ),
-                ExampleButton('zoomIn', Nightfall.coral, _controller.zoomIn),
-                ExampleButton(
-                  'fitScreen',
-                  Nightfall.amber,
-                  _controller.fitScreen,
-                ),
-                ExampleButton(
-                  'switch data',
-                  Nightfall.violet,
-                  () =>
-                      setState(() => _data = barChartMultiDatasetData(++_seed)),
-                ),
-                ExampleButton(
-                  'toggle shadow',
-                  Nightfall.green,
-                  () => setState(() => _shadow = !_shadow),
-                ),
-                ExampleButton(
-                  'toggle corners',
-                  Nightfall.accent,
-                  () => setState(() => _rounded = !_rounded),
-                ),
-              ],
-            ),
-          ],
+        Expanded(child: ChartHostWidget<BarChartView, BarData>(chart: _chart, data: _chart.data)),
+        DemoSeekBar(
+          progress: _seekBar1,
+          max: 50,
+          text: _tvXMax,
+          textWidth: 60,
+          textSize: 10,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar1 = progress;
+            _onProgressChanged();
+          }),
         ),
-        const SizedBox(height: 14),
-        const Filler('Scroll area below the chart', height: 480),
+        DemoSeekBar(
+          progress: _seekBar2,
+          max: 200,
+          text: '$_seekBar2',
+          textWidth: 60,
+          textSize: 14,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar2 = progress;
+            _onProgressChanged();
+          }),
+        ),
       ],
     ),
   );
-}
-
-/// The Activity's legend and axis settings on top of the Nightfall styling. The x axis spans the groups, as the
-/// Activity sets it after grouping; every seed has the same number of groups, so it is set once here.
-void _setup(BarChartView chart) {
-  nightfallSetup(chart);
-  chart.legend
-    ..verticalAlignment = LegendVerticalAlignment.TOP
-    ..horizontalAlignment = LegendHorizontalAlignment.RIGHT
-    ..orientation = LegendOrientation.VERTICAL
-    ..isDrawInsideEnabled = true
-    ..yOffset = 0
-    ..xOffset = 10
-    ..yEntrySpace = 0
-    ..textSize = 8;
-  chart.xAxis
-    ..isCenterAxisLabelsEnabled = true
-    ..valueFormatter = IAxisValueFormatter.fromFunction(
-      (value, _) => value.toInt().toString(),
-    )
-    ..axisMinimum = _startYear.toDouble()
-    ..axisMaximum =
-        _startYear + ((_barWidth + _barSpace) * 2 + _groupSpace) * _groupCount;
-  chart.axisLeft
-    ..valueFormatter = LargeValueFormatter()
-    ..spaceTop = 35
-    ..axisMinimum = 0;
-}
-
-/// Two data sets of [_groupCount] bars, one per year from [_startYear], with values from 0 to [_randomMultiplier], as
-/// the Activity's onProgressChanged, grouped with [BarData.groupBars]. The values depend on [seed] only, and every
-/// seed has the same shape, so switching between them animates.
-BarData barChartMultiDatasetData(int seed) {
-  final random = math.Random(seed);
-  final values1 = <BarEntry>[];
-  final values2 = <BarEntry>[];
-  for (var i = _startYear; i < _startYear + _groupCount; i++) {
-    values1.add(
-      BarEntry(x: i.toDouble(), y: random.nextDouble() * _randomMultiplier),
-    );
-    values2.add(
-      BarEntry(x: i.toDouble(), y: random.nextDouble() * _randomMultiplier),
-    );
-  }
-
-  BarDataSet company(List<BarEntry> values, String label, Color color) =>
-      BarDataSet(values, label)
-        ..fills = [Fill.ofColors(color, color.withAlpha(90))]
-        ..color = color
-        ..barShadowColor = Nightfall.muted.withAlpha(50)
-        ..highlightColor = Nightfall.text
-        ..highlightAlpha = 90;
-
-  return BarData([
-      company(values1, 'Company A', Nightfall.accent),
-      company(values2, 'Company B', Nightfall.coral),
-    ])
-    ..setDrawValues(false)
-    ..barWidth = _barWidth
-    ..groupBars(_startYear.toDouble(), _groupSpace, _barSpace);
 }

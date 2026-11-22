@@ -102,9 +102,9 @@ prefix.
 ## Example
 
 [`example/`](example) is a Flutter app with Android, iOS and HarmonyOS projects. Its home list follows
-MPChartExample's, and each entry opens a page: the "All chart types" showcase in the dark and light Nightfall style
-of MPChartExample, and one page per chart type with buttons for animations, zoom, an animated data switch and the
-chart's own options.
+MPChartExample's, and each entry opens the port of its Activity: the "All chart types" showcase in the dark and
+light Nightfall style, and a page for every other entry with the Activity's chart setup, data, options menu and
+controls. Combined Chart and From Java have no page; see [`example/README.md`](example/README.md).
 
 ```sh
 cd example

@@ -1,26 +1,17 @@
-// Bar Charts / Stacked (MPChartExample's StackedBarActivity): one data set of bars with three stacked values each, in
-// the Nightfall style, labelled with only the stack total on top of each bar (StackedValueFormatter(false, '', 0)).
-// The data is generated as the Activity's onProgressChanged generates it at the seek bars' initial values, from a
-// seeded Random; the star icons are left out, as the Activity does not draw them.
-import 'dart:math' as math;
-
-// Material has its own `Easing`; the chart's is MPAndroidChart's Easing.
+// Ported from MPChartExample: StackedBarActivity.kt, with res/layout/activity_barchart.xml and res/menu/bar.xml.
+//
+// Bar Charts / Stacked: one data set of bars with three stacked values each (Births, Divorces, Marriages), white
+// value labels inside the stacks, the x axis on top, with a seek bar for the number of bars and one for the range of
+// the values. Not ported: the "View on GitHub" and "Save to Gallery" menu items (see notimportant/demo_base.dart).
 import 'package:flutter/material.dart' hide Easing;
 import 'package:mp_flutter_chart/mp_flutter_chart.dart';
 
-import '../design/nightfall.dart';
+import '../custom/demo_drawables.dart';
+import '../custom/my_axis_value_formatter.dart';
+import '../custom/my_value_formatter.dart';
+import '../notimportant/demo_base.dart';
 
-/// Number of bars, the Activity's seekBar1 initial value.
-const int _count = 12;
-
-/// Upper end of each stack value before the offset, the Activity's seekBar2 initial value plus one.
-const double _mul = 100 + 1;
-
-/// Names of the three stack values, bottom to top.
-const List<String> _stackLabels = ['Births', 'Divorces', 'Marriages'];
-
-/// A [BarChart] of stacked bars inside a [ListView], with buttons that drive it through a [ChartController] and toggle
-/// the bar shadow and the rounded bar corners.
+/// StackedBarActivity.
 class StackedBarPage extends StatefulWidget {
   const StackedBarPage({super.key});
 
@@ -28,149 +19,176 @@ class StackedBarPage extends StatefulWidget {
   State<StackedBarPage> createState() => _StackedBarPageState();
 }
 
-class _StackedBarPageState extends State<StackedBarPage> {
-  final ChartController _controller = ChartController();
-  int _seed = 0;
-  late BarData _data = stackedBarData(_seed);
-  bool _shadow = false;
-  bool _rounded = true;
+class _StackedBarPageState extends State<StackedBarPage> with DemoBase {
+  /// `binding.chart1`.
+  final BarChartView _chart = BarChartView();
+
+  /// `barSet`: the data set onProgressChanged creates once and then gives new entries.
+  BarDataSet? _barSet;
+
+  /// `binding.seekBar1.progress`.
+  int _seekBar1 = 12;
+
+  /// `binding.seekBar2.progress`.
+  int _seekBar2 = 100;
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+
+    _chart
+      ..onChartValueSelectedListener = OnChartValueSelectedListener.fromFunction(
+        onValueSelected: (e, h) {
+          final stackValues = (e as BarEntry).stackValues;
+          if (stackValues != null) {
+            logI('VAL SELECTED', 'Value: ${stackValues[h.stackIndex]}');
+          } else {
+            logI('VAL SELECTED', 'Value: ${e.y}');
+          }
+        },
+        onNothingSelected: () {},
+      )
+      ..description.isEnabled = false
+      ..maxVisibleCount = 40
+      ..isPinchZoomEnabled = false
+      ..isDrawGridBackgroundEnabled = false
+      ..isDrawBarShadowEnabled = false
+      ..isDrawValueAboveBarEnabled = false
+      ..isHighlightFullBarEnabled = false;
+
+    _chart.axisLeft
+      ..valueFormatter = MyAxisValueFormatter()
+      ..axisMinimum = 0;
+    _chart.axisRight.isEnabled = false;
+
+    _chart.xAxis.position = XAxisPosition.TOP;
+
+    // Setting the progress of the seek bars calls onProgressChanged, which sets the data.
+    _onProgressChanged();
+
+    _chart.legend
+      ..verticalAlignment = LegendVerticalAlignment.BOTTOM
+      ..horizontalAlignment = LegendHorizontalAlignment.RIGHT
+      ..orientation = LegendOrientation.HORIZONTAL
+      ..isDrawInsideEnabled = false
+      ..formSize = 8
+      ..formToTextSpace = 4
+      ..xEntrySpace = 6;
   }
 
+  /// `onProgressChanged`: a stack of three values per bar for the progress of the two seek bars.
+  void _onProgressChanged() {
+    final values = <BarEntry>[];
+    for (var i = 0; i < _seekBar1; i++) {
+      final mul = (_seekBar2 + 1).toDouble();
+      final val1 = mathRandom() * mul + mul / 3;
+      final val2 = mathRandom() * mul + mul / 3;
+      final val3 = mathRandom() * mul + mul / 3;
+
+      values.add(BarEntry.stacked(x: i.toDouble(), stackValues: [val1, val2, val3], icon: starDrawable));
+    }
+
+    final existing = _barSet;
+    if (existing != null) {
+      existing.entries = values;
+      _chart.notifyDataSetChanged();
+    } else {
+      final set1 = BarDataSet(values, 'Statistics Vienna 2014')
+        ..isDrawIconsEnabled = false
+        ..colors = _getColors()
+        ..stackLabels = const ['Births', 'Divorces', 'Marriages'];
+
+      final data = BarData([set1])
+        ..setValueFormatter(MyValueFormatter())
+        ..setValueTextColor(const Color(0xFFFFFFFF));
+
+      _barSet = set1;
+      _chart.data = data;
+    }
+
+    _chart.isFitBarsEnabled = true;
+    _chart.invalidate();
+  }
+
+  /// `getColors()`: the first three of ColorTemplate.MATERIAL_COLORS.
+  List<Color> _getColors() => ColorTemplate.MATERIAL_COLORS.take(3).toList();
+
+  /// res/menu/bar.xml.
+  List<DemoMenuItem> get _menu => [
+    DemoMenuItem('Toggle Bar Borders', () {
+      for (final set in _chart.data?.dataSets ?? const <IBarDataSet>[]) {
+        (set as BarDataSet).barBorderWidth = set.barBorderWidth == 1 ? 0 : 1;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Rounded Sections', () {
+      for (final dataSet in _chart.data?.dataSets ?? const <IBarDataSet>[]) {
+        final set = dataSet as BarDataSet;
+        set.isStackSectionsRounded = !set.isStackSectionsRounded;
+        set.barCornerRadius = set.isStackSectionsRounded ? 6 : 0;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Values', () {
+      for (final set in _chart.data?.dataSets ?? const <IBarDataSet>[]) {
+        set.isDrawValuesEnabled = !set.isDrawValuesEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Icons', () {
+      for (final set in _chart.data?.dataSets ?? const <IBarDataSet>[]) {
+        set.isDrawIconsEnabled = !set.isDrawIconsEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Highlight', () {
+      final data = _chart.data;
+      if (data != null) {
+        data.isHighlightEnabled = !data.isHighlightEnabled;
+        _chart.invalidate();
+      }
+    }),
+    DemoMenuItem('Toggle PinchZoom', () {
+      _chart.isPinchZoomEnabled = !_chart.isPinchZoomEnabled;
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Auto Scale', () {
+      _chart.isAutoScaleMinMaxEnabled = !_chart.isAutoScaleMinMaxEnabled;
+      _chart.notifyDataSetChanged();
+    }),
+    DemoMenuItem('Animate X', () => _chart.animateX(2000)),
+    DemoMenuItem('Animate Y', () => _chart.animateY(2000)),
+    DemoMenuItem('Animate XY', () => _chart.animateXY(2000, 2000)),
+  ];
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Stacked'),
-      backgroundColor: Nightfall.card,
-      foregroundColor: Nightfall.text,
-    ),
-    body: ListView(
-      dragStartBehavior: chartScrollDragStartBehavior,
-      padding: const EdgeInsets.all(14),
+  Widget build(BuildContext context) => DemoScaffold(
+    title: 'Stacked',
+    menu: _menu,
+    body: Column(
       children: [
-        ChartCard(
-          title: 'Statistics Vienna 2014',
-          subtitle: 'Drag, pinch or double-tap the chart; tap a stack value',
-          children: [
-            SizedBox(
-              height: 300,
-              child: BarChart(
-                data: _data,
-                controller: _controller,
-                animateChanges: true,
-                contentDescription:
-                    'Stacked bar chart with three values per bar',
-                marker: (entry, highlight) =>
-                    Pill(_stackText(entry, highlight)),
-                setup: _setup,
-                update: (chart) {
-                  chart.isDrawBarShadowEnabled = _shadow;
-                  for (final set in _data.dataSets.cast<BarDataSet>()) {
-                    set.barCornerRadius = _rounded ? 7 : 0;
-                  }
-                },
-              ),
-            ),
-            StatusLine(_controller),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ExampleButton(
-                  'animateY',
-                  Nightfall.accent,
-                  () => _controller.animateY(1500),
-                ),
-                ExampleButton('zoomIn', Nightfall.coral, _controller.zoomIn),
-                ExampleButton(
-                  'fitScreen',
-                  Nightfall.amber,
-                  _controller.fitScreen,
-                ),
-                ExampleButton(
-                  'switch data',
-                  Nightfall.violet,
-                  () => setState(() => _data = stackedBarData(++_seed)),
-                ),
-                ExampleButton(
-                  'toggle shadow',
-                  Nightfall.green,
-                  () => setState(() => _shadow = !_shadow),
-                ),
-                ExampleButton(
-                  'toggle corners',
-                  Nightfall.accent,
-                  () => setState(() => _rounded = !_rounded),
-                ),
-              ],
-            ),
-          ],
+        Expanded(child: ChartHostWidget<BarChartView, BarData>(chart: _chart, data: _chart.data)),
+        DemoSeekBar(
+          progress: _seekBar1,
+          max: 1500,
+          textWidth: 60,
+          textSize: 14,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar1 = progress;
+            _onProgressChanged();
+          }),
         ),
-        const SizedBox(height: 14),
-        const Filler('Scroll area below the chart', height: 480),
+        DemoSeekBar(
+          progress: _seekBar2,
+          max: 200,
+          textWidth: 60,
+          textSize: 14,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar2 = progress;
+            _onProgressChanged();
+          }),
+        ),
       ],
     ),
   );
-}
-
-/// The highlighted stack value with its name, or the bar's total when no single value is highlighted.
-String _stackText(Entry entry, Highlight highlight) {
-  final stack = entry is BarEntry ? entry.stackValues : null;
-  final index = highlight.stackIndex;
-  if (stack == null || index < 0 || index >= stack.length) {
-    return 'total ${entry.y.toStringAsFixed(0)}';
-  }
-  return '${_stackLabels[index]} · ${stack[index].toStringAsFixed(0)}';
-}
-
-/// The Activity's chart, axis and legend settings on top of the Nightfall styling; the legend wraps, as its four
-/// entries do not fit on one line of a phone.
-void _setup(BarChartView chart) {
-  nightfallSetup(chart);
-  chart.maxVisibleCount = 40;
-  chart.isDrawValueAboveBarEnabled = false;
-  chart.isHighlightFullBarEnabled = false;
-  chart.isFitBarsEnabled = true;
-  chart.axisLeft.axisMinimum = 0;
-  chart.legend
-    ..verticalAlignment = LegendVerticalAlignment.BOTTOM
-    ..horizontalAlignment = LegendHorizontalAlignment.RIGHT
-    ..orientation = LegendOrientation.HORIZONTAL
-    ..isDrawInsideEnabled = false
-    ..formSize = 8
-    ..formToTextSpace = 4
-    ..xEntrySpace = 6
-    ..isWordWrapEnabled = true;
-}
-
-/// [_count] bars from x 0, each a stack of three values from [_mul] / 3 to [_mul] * 4 / 3, as the Activity's
-/// onProgressChanged, with the totals in the dark stage colour, as they are drawn inside the top section. The values
-/// depend on [seed] only, and every seed has the same shape, so switching between them animates.
-BarData stackedBarData(int seed) {
-  final random = math.Random(seed);
-  final values = <BarEntry>[];
-  for (var i = 0; i < _count; i++) {
-    final val1 = random.nextDouble() * _mul + _mul / 3;
-    final val2 = random.nextDouble() * _mul + _mul / 3;
-    final val3 = random.nextDouble() * _mul + _mul / 3;
-    values.add(
-      BarEntry.stacked(x: i.toDouble(), stackValues: [val1, val2, val3]),
-    );
-  }
-
-  final set1 = BarDataSet(values, 'Statistics Vienna 2014')
-    ..isDrawIconsEnabled = false
-    ..setColors(const [Nightfall.accent, Nightfall.coral, Nightfall.amber])
-    ..stackLabels = _stackLabels
-    ..barShadowColor = Nightfall.muted.withAlpha(50)
-    ..highlightColor = Nightfall.text
-    ..highlightAlpha = 90;
-
-  return BarData([set1])
-    ..setValueFormatter(StackedValueFormatter(false, '', 0))
-    ..setValueTextColor(Nightfall.stage);
 }

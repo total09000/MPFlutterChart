@@ -1,26 +1,16 @@
-// Bar Charts / Horizontal (MPChartExample's HorizontalBarChartActivity): one data set drawn as horizontal bars, in the
-// Nightfall style: the x axis runs down the left side and the y axis along the top. The data is generated as the
-// Activity's setData generates it at the seek bars' initial values, from a seeded Random, but shifted down by a third
-// of the range so some values are negative; for that the Activity's axis minimum of 0 is left out.
-import 'dart:math' as math;
-
-// Material has its own `Easing`; the chart's is MPAndroidChart's Easing.
+// Ported from MPChartExample: HorizontalBarChartActivity.kt, with res/layout/activity_horizontalbarchart.xml and
+// res/menu/bar.xml.
+//
+// Bar Charts / Horizontal: one data set drawn as horizontal bars ten x units apart, with a seek bar for the number of
+// bars and one for their range. Not ported: the "View on GitHub" and "Save to Gallery" menu items (see
+// notimportant/demo_base.dart).
 import 'package:flutter/material.dart' hide Easing;
 import 'package:mp_flutter_chart/mp_flutter_chart.dart';
 
-import '../design/nightfall.dart';
+import '../custom/demo_drawables.dart';
+import '../notimportant/demo_base.dart';
 
-/// Number of bars, the Activity's seekBar1 initial value.
-const int _count = 12;
-
-/// Width of the value range, the Activity's seekBar2 initial value.
-const double _range = 50;
-
-/// x distance between two bars.
-const double _spaceForBar = 10;
-
-/// A [HorizontalBarChart] of one data set with negative values inside a [ListView], with buttons that drive it
-/// through a [ChartController] and toggle the bar shadow, the rounded bar corners and where the value labels sit.
+/// HorizontalBarChartActivity.
 class HorizontalBarChartPage extends StatefulWidget {
   const HorizontalBarChartPage({super.key});
 
@@ -28,144 +18,196 @@ class HorizontalBarChartPage extends StatefulWidget {
   State<HorizontalBarChartPage> createState() => _HorizontalBarChartPageState();
 }
 
-class _HorizontalBarChartPageState extends State<HorizontalBarChartPage> {
-  final ChartController _controller = ChartController();
-  int _seed = 0;
-  late BarData _data = horizontalBarChartData(_seed);
-  bool _shadow = false;
-  bool _rounded = true;
-  bool _valueAboveBar = true;
+class _HorizontalBarChartPageState extends State<HorizontalBarChartPage> with DemoBase {
+  /// `binding.chart1`.
+  final HorizontalBarChartView _chart = HorizontalBarChartView();
+
+  /// `barSet`: the data set setData creates once and then gives new entries.
+  BarDataSet? _barSet;
+
+  /// `onValueSelectedRectF`.
+  final MutableRect _onValueSelectedRectF = MutableRect();
+
+  /// `binding.seekBar1.progress`.
+  int _seekBar1 = 12;
+
+  /// `binding.seekBar2.progress`.
+  int _seekBar2 = 50;
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+
+    _chart
+      ..onChartValueSelectedListener = OnChartValueSelectedListener.fromFunction(
+        onValueSelected: _onValueSelected,
+        onNothingSelected: () {},
+      )
+      ..isDrawBarShadowEnabled = false
+      ..isDrawValueAboveBarEnabled = true
+      ..description.isEnabled = false
+      ..maxVisibleCount = 60
+      ..isPinchZoomEnabled = false
+      ..isDrawGridBackgroundEnabled = false;
+
+    _chart.xAxis
+      ..position = XAxisPosition.BOTTOM
+      ..typeface = tfLight
+      ..isDrawAxisLineEnabled = true
+      ..isDrawGridLinesEnabled = false
+      ..granularity = 10;
+
+    _chart.axisLeft
+      ..typeface = tfLight
+      ..isDrawAxisLineEnabled = true
+      ..isDrawGridLinesEnabled = true
+      ..axisMinimum = 0;
+
+    _chart.axisRight
+      ..typeface = tfLight
+      ..isDrawAxisLineEnabled = true
+      ..isDrawGridLinesEnabled = false
+      ..axisMinimum = 0;
+
+    // animateY(2500) is in the host's setup.
+    _chart.isFitBarsEnabled = true;
+
+    // Setting the progress of the seek bars calls onProgressChanged, which sets the data.
+    _onProgressChanged();
+
+    _chart.legend
+      ..verticalAlignment = LegendVerticalAlignment.BOTTOM
+      ..horizontalAlignment = LegendHorizontalAlignment.LEFT
+      ..orientation = LegendOrientation.HORIZONTAL
+      ..isDrawInsideEnabled = false
+      ..formSize = 8
+      ..xEntrySpace = 4;
   }
 
+  /// `setData(count, range)`.
+  void _setData(int count, double range) {
+    const barWidth = 9.0;
+    const spaceForBar = 10.0;
+    final values = <BarEntry>[];
+
+    for (var i = 0; i < count; i++) {
+      final value = mathRandom() * range;
+      values.add(BarEntry(x: i * spaceForBar, y: value, icon: starDrawable));
+    }
+
+    final existing = _barSet;
+    if (existing != null) {
+      existing.entries = values;
+      _chart.notifyDataSetChanged();
+    } else {
+      final set1 = BarDataSet(values, 'DataSet 1')..isDrawIconsEnabled = false;
+
+      final data = BarData([set1])
+        ..setValueTextSize(10)
+        ..setValueTypeface(tfLight)
+        ..barWidth = barWidth;
+      _barSet = set1;
+      _chart.data = data;
+    }
+  }
+
+  /// `onProgressChanged`: new data for the progress of the two seek bars.
+  void _onProgressChanged() {
+    _setData(_seekBar1, _seekBar2.toDouble());
+    _chart.isFitBarsEnabled = true;
+    _chart.invalidate();
+  }
+
+  /// `onValueSelected`.
+  void _onValueSelected(Entry e, Highlight h) {
+    final bounds = _onValueSelectedRectF;
+    _chart.getBarBounds(e as BarEntry, bounds);
+
+    final axis = _chart.data?.getDataSetByIndex(h.dataSetIndex)?.axisDependency;
+    if (axis == null) return;
+    final position = _chart.getPosition(e, axis);
+
+    logI('bounds', bounds.toString());
+    logI('position', position.toString());
+
+    if (position != null) MPPointF.recycleInstance(position);
+  }
+
+  /// res/menu/bar.xml; "Toggle Rounded Sections" has no branch in `onOptionsItemSelected` and does nothing.
+  List<DemoMenuItem> get _menu => [
+    DemoMenuItem('Toggle Bar Borders', () {
+      for (final set in _chart.data?.dataSets ?? const <IBarDataSet>[]) {
+        (set as BarDataSet).barBorderWidth = set.barBorderWidth == 1 ? 0 : 1;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Rounded Sections', () {}),
+    DemoMenuItem('Toggle Values', () {
+      for (final set in _chart.data?.dataSets ?? const <IBarDataSet>[]) {
+        set.isDrawValuesEnabled = !set.isDrawValuesEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Icons', () {
+      for (final set in _chart.data?.dataSets ?? const <IBarDataSet>[]) {
+        set.isDrawIconsEnabled = !set.isDrawIconsEnabled;
+      }
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Highlight', () {
+      final data = _chart.data;
+      if (data != null) {
+        data.isHighlightEnabled = !data.isHighlightEnabled;
+        _chart.invalidate();
+      }
+    }),
+    DemoMenuItem('Toggle PinchZoom', () {
+      _chart.isPinchZoomEnabled = !_chart.isPinchZoomEnabled;
+      _chart.invalidate();
+    }),
+    DemoMenuItem('Toggle Auto Scale', () {
+      _chart.isAutoScaleMinMaxEnabled = !_chart.isAutoScaleMinMaxEnabled;
+      _chart.notifyDataSetChanged();
+    }),
+    DemoMenuItem('Animate X', () => _chart.animateX(2000)),
+    DemoMenuItem('Animate Y', () => _chart.animateY(2000)),
+    DemoMenuItem('Animate XY', () => _chart.animateXY(2000, 2000)),
+  ];
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Horizontal'),
-      backgroundColor: Nightfall.card,
-      foregroundColor: Nightfall.text,
-    ),
-    body: ListView(
-      dragStartBehavior: chartScrollDragStartBehavior,
-      padding: const EdgeInsets.all(14),
+  Widget build(BuildContext context) => DemoScaffold(
+    title: 'Horizontal',
+    menu: _menu,
+    body: Column(
       children: [
-        ChartCard(
-          title: 'DataSet 1',
-          subtitle: 'Drag, pinch or double-tap the chart; tap a bar',
-          children: [
-            SizedBox(
-              height: 300,
-              child: HorizontalBarChart(
-                data: _data,
-                controller: _controller,
-                animateChanges: true,
-                contentDescription: 'Horizontal bar chart with one data set',
-                marker: (entry, highlight) => Pill(
-                  'x ${entry.x.toStringAsFixed(0)} · ${entry.y.toStringAsFixed(1)}',
-                ),
-                setup: _setup,
-                update: (chart) {
-                  chart.isDrawBarShadowEnabled = _shadow;
-                  chart.isDrawValueAboveBarEnabled = _valueAboveBar;
-                  // Dark labels inside the bars, the light muted colour above them on the card.
-                  _data.setValueTextColor(
-                    _valueAboveBar ? Nightfall.muted : Nightfall.stage,
-                  );
-                  for (final set in _data.dataSets.cast<BarDataSet>()) {
-                    set.barCornerRadius = _rounded ? 7 : 0;
-                  }
-                },
-              ),
+        Expanded(
+          // android:background="@android:color/white".
+          child: ColoredBox(
+            color: demoChartBackground,
+            child: ChartHostWidget<HorizontalBarChartView, BarData>(
+              chart: _chart,
+              data: _chart.data,
+              setup: (chart) => chart.animateY(2500),
             ),
-            StatusLine(_controller),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ExampleButton(
-                  'animateY',
-                  Nightfall.accent,
-                  () => _controller.animateY(1500),
-                ),
-                ExampleButton('zoomIn', Nightfall.coral, _controller.zoomIn),
-                ExampleButton(
-                  'fitScreen',
-                  Nightfall.amber,
-                  _controller.fitScreen,
-                ),
-                ExampleButton(
-                  'switch data',
-                  Nightfall.violet,
-                  () => setState(() => _data = horizontalBarChartData(++_seed)),
-                ),
-                ExampleButton(
-                  'toggle shadow',
-                  Nightfall.green,
-                  () => setState(() => _shadow = !_shadow),
-                ),
-                ExampleButton(
-                  'toggle corners',
-                  Nightfall.accent,
-                  () => setState(() => _rounded = !_rounded),
-                ),
-                ExampleButton(
-                  'toggle above bar',
-                  Nightfall.coral,
-                  () => setState(() => _valueAboveBar = !_valueAboveBar),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 14),
-        const Filler('Scroll area below the chart', height: 480),
+        DemoSeekBar(
+          progress: _seekBar1,
+          max: 500,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar1 = progress;
+            _onProgressChanged();
+          }),
+        ),
+        DemoSeekBar(
+          progress: _seekBar2,
+          max: 200,
+          onProgressChanged: (progress) => setState(() {
+            _seekBar2 = progress;
+            _onProgressChanged();
+          }),
+        ),
       ],
     ),
   );
-}
-
-/// The Activity's chart, axis and legend settings on top of the Nightfall styling.
-void _setup(HorizontalBarChartView chart) {
-  nightfallSetup(chart);
-  chart.maxVisibleCount = 60;
-  chart.isFitBarsEnabled = true;
-  chart.xAxis.granularity = 10;
-  chart.legend
-    ..verticalAlignment = LegendVerticalAlignment.BOTTOM
-    ..horizontalAlignment = LegendHorizontalAlignment.LEFT
-    ..orientation = LegendOrientation.HORIZONTAL
-    ..isDrawInsideEnabled = false
-    ..formSize = 8
-    ..xEntrySpace = 4;
-}
-
-/// [_count] bars [_spaceForBar] apart from x 0, with values from -[_range] / 3 to [_range] * 2 / 3: the Activity's
-/// values from 0 to [_range], shifted down. The values depend on [seed] only, and every seed has the same shape, so
-/// switching between them animates.
-BarData horizontalBarChartData(int seed) {
-  final random = math.Random(seed);
-  final values = [
-    for (var i = 0; i < _count; i++)
-      BarEntry(
-        x: i * _spaceForBar,
-        y: random.nextDouble() * _range - _range / 3,
-      ),
-  ];
-
-  final set1 = BarDataSet(values, 'DataSet 1')
-    ..isDrawIconsEnabled = false
-    ..setGradientColor(Nightfall.accent, Nightfall.accent.withAlpha(90))
-    ..color = Nightfall.accent
-    ..barShadowColor = Nightfall.muted.withAlpha(50)
-    ..highlightColor = Nightfall.text
-    ..highlightAlpha = 90;
-
-  return BarData([set1])
-    ..setValueTextSize(10)
-    ..setValueTextColor(Nightfall.muted)
-    ..barWidth = 9;
 }
