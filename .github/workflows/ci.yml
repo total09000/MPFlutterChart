@@ -1,0 +1,70 @@
+# CI for mp_flutter_chart: checks the package against upstream Flutter from the stable channel, at the pubspec floor
+# (flutter: ">=3.35.0", sdk: ">=3.9.0 <4.0.0") and at the latest stable release. HarmonyOS builds use the OpenHarmony
+# Flutter SDK and are not run here. test/tool/ci_workflow_test.dart pins the key properties of this file.
+#
+# - `flutter analyze` at the package root also analyzes example/, which is why example/ gets its own `pub get` first.
+# - Tag `golden` is excluded: the PNGs under test/golden/goldens/macos/ were rendered on a local macOS host, and
+#   whether a GitHub macOS runner reproduces them pixel for pixel is not known yet.
+# - Tag `perf` is excluded: those tests only print timings and have no thresholds.
+# - The API parity step runs in report mode (exit 0 even with missing symbols); the gate that fails on missing symbols
+#   is prepared at the end of the job, commented out until CombinedChart is ported.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.name }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The pubspec lower bound (flutter: ">=3.35.0"): the newest 3.35 patch release.
+          - name: floor
+            flutter-version: '3.35.x'
+          # Empty = the latest release of the stable channel.
+          - name: latest stable
+            flutter-version: ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ matrix.flutter-version }}
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Get example dependencies
+        run: flutter pub get
+        working-directory: example
+
+      - name: Analyze (package and example/)
+        run: flutter analyze
+
+      - name: Test (without golden and perf)
+        run: flutter test --exclude-tags golden,perf
+
+      - name: API parity report
+        run: dart run tool/api_parity.dart --scope=all
+
+      # Enable once CombinedChart is ported: every Kotlin symbol present or whitelisted.
+      # - name: API parity gate
+      #   run: dart run tool/api_parity.dart --scope=all --fail-on-missing

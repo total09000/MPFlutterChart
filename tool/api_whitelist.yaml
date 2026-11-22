@@ -1,0 +1,162 @@
+# Whitelist for tool/api_parity.dart (spec §5.3); reviewed together with the docs/api-parity-*.md reports.
+#
+# symbols:   Kotlin symbols of tool/MPChartLib.api that are deliberately NOT ported, one sentence of reason each.
+#            `Class` covers the class and all its members; `Class.member` one member (overloads are one symbol).
+#            Names are printed by the tool: nested classes dotted (`YAxis.AxisDependency`), JVM getters/setters as
+#            the Kotlin property (`isHardwareAccelerationEnabled` covers its setter).
+#            Only things that make no sense in Flutter belong here. Work deferred to a later phase is NOT
+#            whitelisted; it stays in `missing` until the class or member is ported.
+# additions: Dart-only public API with no MPChartLib.api counterpart (Ruling R44 and task reports). Listed for
+#            review, never scored; the tool only checks that each still exists in lib/src.
+#
+# Format (read without package:yaml): `  - symbol: <name>` then `    reason: <text>`; wrap a reason in double
+# quotes when it contains ": " or " #".
+#
+# Considered but not entered, because no scored Kotlin symbol exists for them:
+#   - Constructors are not scored (`<init>` is skipped): Chart(Context[, AttributeSet[, defStyle]]),
+#     MarkerView(Context, layoutResource) (so MarkerView.layoutResource / inflation is not a dump symbol),
+#     MarkerImage(Context, drawableResourceId), Fill(...) and Highlight(...) overloads.
+#   - Android-only overloads collapse into a member that Dart has: BaseDataSet.setColors(List, Context),
+#     LineDataSet.setCircleColors(List, Context), Utils.drawMultilineText(Canvas, StaticLayout, ...).
+#   - Not in the dump: Chart.unbindDrawables (private in v4.0.1), ChartTouchListener.onShowPress /
+#     onSingleTapConfirmed / onContextClick and BarLineChartTouchListener's VelocityTracker (inherited from or
+#     private to Android classes).
+#   - Phase-1 slots (StackedValueFormatter / LegendRenderer BarEntry and IBarDataSet branches) are code paths, not
+#     members.
+# The widget-layer chart widgets (LineChart, BarChart, HorizontalBarChart, ScatterChart, CandleStickChart, BubbleChart,
+# PieChart and RadarChart in lib/src/widgets/*_chart_widget.dart) share the core class names, so they cannot be listed
+# under additions; they belong with ChartHostWidget.
+
+symbols:
+  - symbol: Chart.saveToGallery
+    reason: Saving to the gallery (MediaStore) is a platform capability and a non-goal (spec §3.2); apps save the bytes of toPngBytes() themselves.
+  - symbol: Chart.isHardwareAccelerationEnabled
+    reason: Toggles the Android View layer type; Flutter always renders through its own engine, so there is nothing to switch (spec §6.4).
+  - symbol: Chart.onMeasure
+    reason: Android View measuring; ChartRenderBox.performLayout sizes the chart (spec §6.1).
+  - symbol: Chart.onLayout
+    reason: Android ViewGroup child layout; the Flutter host lays out the chart and the widget-layer marker (spec §6.1).
+  - symbol: Entry.describeContents
+    reason: Android Parcelable support is a non-goal (spec §3.2).
+  - symbol: Entry.writeToParcel
+    reason: Android Parcelable support is a non-goal (spec §3.2).
+  - symbol: Entry.CREATOR
+    reason: Android Parcelable support is a non-goal (spec §3.2).
+  - symbol: ChartTouchListener.gestureDetector
+    reason: Returns an android.view.GestureDetector; the port's listener runs its own tap, double-tap, long-press and fling detection, fed through gestureDetectorOnTouchEvent (spec §6.2).
+  - symbol: PieRadarChartTouchListener.onSingleTapConfirmed
+    reason: Android GestureDetector callback that the port's ChartTouchListener does not declare, so the override cannot exist (Phase 0 handover item 6, decision D16); Kotlin's override only returns true, and a tap selects through onSingleTapUp.
+  - symbol: LineChartRenderer.drawBitmap
+    reason: The per-frame offscreen bitmap is not ported; lines, fills and circles draw straight onto the canvas (spec §6.4, Ruling R26).
+  - symbol: LineChartRenderer.bitmapCanvas
+    reason: The per-frame offscreen bitmap is not ported; lines, fills and circles draw straight onto the canvas (spec §6.4, Ruling R26).
+  - symbol: LineChartRenderer.bitmapConfig
+    reason: Android Bitmap.Config of the offscreen bitmap, which is not ported (spec §6.4, Ruling R26).
+  - symbol: LineChartRenderer.releaseBitmap
+    reason: Frees the offscreen bitmap, which is not ported, so there is nothing to release (spec §6.4, Ruling R26).
+  - symbol: PieChartRenderer.drawBitmap
+    reason: The offscreen bitmap is not ported; slices, highlights and the hole draw straight onto the chart canvas, and a saveLayer with BlendMode.srcATop clips the transparent circle to the slices (spec §6.4, Ruling R26, decision D8).
+  - symbol: PieChartRenderer.bitmapCanvas
+    reason: Canvas of the offscreen bitmap, which is not ported; the renderer draws onto the canvas that drawData, drawHighlighted and drawExtras are given (spec §6.4, Ruling R26, decision D8).
+  - symbol: PieChartRenderer.releaseBitmap
+    reason: Frees the offscreen bitmap, which is not ported, so there is nothing to release (spec §6.4, Ruling R26, decision D8).
+  - symbol: ColorTemplate.createColors
+    reason: Resolves Android color resource ids through Resources; Flutter has no resource ids (Ruling R18).
+  - symbol: FileUtils.loadEntriesFromFile
+    reason: Reads from Android external storage; only the AssetBundle loader is kept (spec §6.4).
+  - symbol: FileUtils.saveToSdCard
+    reason: Writes to the Android SD card; only the AssetBundle loader is kept (spec §6.4).
+  - symbol: Utils.init
+    reason: Reads display metrics from an Android Context; Flutter logical pixels are dp, so convertDpToPixel is the identity and needs no init, and the chart widgets set the density as Utils.devicePixelRatio (spec §6.1).
+  - symbol: Utils.postInvalidateOnAnimation
+    reason: Android View invalidation helper; charts redraw through their ChartHost and post(invalidate) (spec §6.1, Ruling R35).
+  - symbol: Utils.velocityTrackerPointerUpCleanUpIfNecessary
+    reason: Takes android.view.MotionEvent and VelocityTracker; the same cleanup is ChartVelocityTracker.pointerUpCleanUpIfNecessary on the Flutter types (spec §6.2).
+
+additions:
+  - symbol: Chart.afterDrawListeners
+    reason: Stands in for the ViewTreeObserver.OnDrawListener that MPChartCompose adds; the widget layer refreshes controller and marker after each draw (Ruling R44).
+  - symbol: Chart.notifyAfterDraw
+    reason: Protected hook that runs afterDrawListeners once per draw; BarLineChartBase, PieChart and RadarChart call it at the end of their onDraw (Ruling R44).
+  - symbol: Chart.onHostVsyncChanged
+    reason: Hook the host calls when it lends the chart another vsync, so touch-listener tickers on the previous provider stop (fling and rotation deceleration, Rulings R38/R41); BarLineChartBase and PieRadarChartBase override it.
+  - symbol: Chart.host
+    reason: The ChartHost (render object) that shows the chart and receives its redraw, post and vsync requests (spec §6.1).
+  - symbol: Chart.toPngBytes
+    reason: PNG-encoding companion of toImage, the port of toBitmap (spec §6.1).
+  - symbol: ChartHost
+    reason: Interface between the plain-Dart chart and its Flutter host, standing in for the Android View plumbing (spec §6.1).
+  - symbol: Transformer.valueToPixelMatrix4
+    reason: "@visibleForTesting: the one-step value, touch and offset matrix that pathValueToPixel applies as 4x4 storage, combined per axis so a non-finite x term cannot make y NaN (final review I3)."
+  - symbol: ChartInvalidator
+    reason: The View.invalidate() callback ViewPortHandler.refresh needs, implemented by Chart (spec §6.1).
+  - symbol: Utils.devicePixelRatio
+    reason: The display density Utils.init read, set by the chart widgets from their view; used only to round text bounds, label sizes, icon positions and dash lengths on the device px grid like Kotlin's Int px.
+  - symbol: ChartAnimator.vsync
+    reason: TickerProvider that drives the AnimationControllers replacing ValueAnimator (spec §6.3).
+  - symbol: Easing.fromCurve
+    reason: Adapts a Flutter Curve to an EasingFunction (spec §6.3).
+  - symbol: ChartTouchEvent
+    reason: Stands in for android.view.MotionEvent in the touch listeners (spec §6.2, Ruling R2).
+  - symbol: ChartTouchAction
+    reason: The MotionEvent action codes as an enum (spec §6.2).
+  - symbol: ChartVelocityTracker
+    reason: Stands in for android.view.VelocityTracker on top of the Flutter VelocityTracker (spec §6.2).
+  - symbol: ChartTouchListener.onDown
+    reason: GestureDetector.SimpleOnGestureListener callback that Kotlin inherits from Android, so it is not in the dump.
+  - symbol: ChartTouchListener.onScroll
+    reason: GestureDetector.SimpleOnGestureListener callback that Kotlin inherits from Android, so it is not in the dump.
+  - symbol: ChartTouchListener.onDoubleTapEvent
+    reason: GestureDetector.SimpleOnGestureListener callback that Kotlin inherits from Android, so it is not in the dump.
+  - symbol: ChartTouchListener.gestureDetectorOnTouchEvent
+    reason: Feeds an event to the listener's own gesture detection, replacing gestureDetector.onTouchEvent (spec §6.2).
+  - symbol: BarLineChartTouchListener.clock
+    reason: Injectable millisecond clock for fling deceleration, standing in for AnimationUtils.currentAnimationTimeMillis (testability).
+  - symbol: PieRadarChartTouchListener.clock
+    reason: Injectable millisecond clock for the rotation deceleration, standing in for AnimationUtils.currentAnimationTimeMillis (testability, decision D11).
+  - symbol: PieChartRenderer.centerTextLayoutCount
+    reason: "@visibleForTesting: how many times the cached center text TextPainter was laid out, so a test can check that an unchanged text is not laid out again (decision D7)."
+  - symbol: RadarHighlighter.getHighlightsAtIndex
+    reason: Kotlin's protected fun of the final class RadarHighlighter, which the binary-compatibility dump leaves out; ported @protected, so it is Dart API without a dump symbol.
+  - symbol: Matrix
+    reason: Android 3x3 graphics Matrix shim so that Transformer and ViewPortHandler port line by line (spec §6.4).
+  - symbol: MutableRect
+    reason: Mutable RectF shim; renderers reuse RectF fields (spec §6.4).
+  - symbol: ChartPaint
+    reason: Android Paint shim holding the ui.Paint and the text attributes (spec §6.4).
+  - symbol: PaintStyle
+    reason: Android Paint.Style for ChartPaint (spec §6.4).
+  - symbol: PaintAlign
+    reason: Android Paint.Align for ChartPaint (spec §6.4).
+  - symbol: FontMetrics
+    reason: Android Paint.FontMetrics shim (spec §6.4).
+  - symbol: DashPathEffect
+    reason: Android DashPathEffect shim, drawn with PathMetrics (spec §6.4).
+  - symbol: ChartCanvas
+    reason: Extension on ui.Canvas with the Android Canvas calls the renderers use, such as drawText with baseline alignment (spec §6.4).
+  - symbol: ChartDrawable
+    reason: Android Drawable shim for icons, legend forms, Fill and MarkerImage (spec §6.4).
+  - symbol: ImageDrawable
+    reason: ChartDrawable backed by a ui.Image (spec §6.4).
+  - symbol: PainterDrawable
+    reason: ChartDrawable backed by a CustomPainter (spec §6.4).
+  - symbol: Typeface
+    reason: Android Typeface shim wrapping TextStyle font attributes (spec §6.4).
+  - symbol: TextMeasure
+    reason: Cached TextPainter measurement behind Utils.calcTextWidth / calcTextHeight (spec §6.4, §3.3 performance).
+  - symbol: DecimalFormat
+    reason: java.text.DecimalFormat subset used by the formatters (spec §6.4, Rulings R6 and R15).
+  - symbol: ChartController
+    reason: Widget layer, the port of MPChartCompose's ChartState (spec §6.5, Ruling R44).
+  - symbol: ChartHostWidget
+    reason: Widget layer, the port of MPChartCompose's ChartView host (spec §6.5, Ruling R44).
+  - symbol: ChartRenderBox
+    reason: RenderBox host that lays out, paints and feeds touches to a core chart (spec §6.1).
+  - symbol: ChartRenderBoxWidget
+    reason: LeafRenderObjectWidget that creates the ChartRenderBox (spec §6.1).
+  - symbol: ChartArenaRecognizer
+    reason: Lets Chart.disableScroll win the gesture arena at the moment Android calls requestDisallowInterceptTouchEvent (spec §6.2, Ruling R36).
+  - symbol: ChartGestureRecognizer
+    reason: Gesture-arena recognizer that turns PointerEvents into ChartTouchEvents (spec §6.2, Ruling R42).
+  - symbol: WidgetMarker
+    reason: Widget-layer marker, the port of MPChartCompose's ComposeMarker (spec §6.5, Ruling R44).

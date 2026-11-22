@@ -1,0 +1,7 @@
+# Test tags (spec §9.3, §9.5). Run a subset with `tool/flutter.sh test --tags golden`, skip one with
+# `--exclude-tags perf`.
+tags:
+  # Pixel comparisons against test/golden/goldens/macos/; the files are generated and compared on macOS hosts only.
+  golden:
+  # Timings printed to stdout and recorded in docs/phase0-acceptance.md; no thresholds yet.
+  perf:

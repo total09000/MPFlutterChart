@@ -1,0 +1,9 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Class/member names mirror MPAndroidChart 1:1 (spec §5.1, Ruling R4),
+    # e.g. MSCALE_X, PaintStyle.FILL, Easing.Linear — renaming is an anti-goal (spec §3.3).
+    constant_identifier_names: false
+    non_constant_identifier_names: false
+    public_member_api_docs: false

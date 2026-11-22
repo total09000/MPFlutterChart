@@ -1,0 +1,29 @@
+name: mp_flutter_chart
+description: >-
+  A class-for-class Flutter port of MPAndroidChart v4.0.1: line, bar, scatter, candlestick, bubble, pie and radar
+  charts with zoom, pan and animations.
+version: 0.1.0
+homepage: https://github.com/total09000/MPFlutterChart
+repository: https://github.com/total09000/MPFlutterChart
+issue_tracker: https://github.com/total09000/MPFlutterChart/issues
+topics:
+  - chart
+  - charts
+  - graph
+  - visualization
+  - harmonyos
+
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  # Used only by scripts under tool/ (e.g. tool/api_parity.dart); never by lib/.
+  analyzer: ^10.0.1

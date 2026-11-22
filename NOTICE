@@ -1,0 +1,22 @@
+mp_flutter_chart
+Copyright 2026 The mp_flutter_chart authors
+
+This product is a Flutter (Dart) port of MPAndroidChart v4.0.1, ported from
+the Kotlin sources at https://github.com/PhilJay/MPAndroidChart (commit
+fae4ad798564ea9ad494eaf037dca0e745400723). The source code was translated
+from Kotlin to Dart, and Android platform APIs were replaced by Flutter and
+dart:ui equivalents; the differences from the original are listed in
+MIGRATION.md.
+
+The glyph extents in lib/src/graphics/roboto_glyph_extents.dart are derived
+from the Roboto font (Apache License 2.0, Google).
+
+The original NOTICE of MPAndroidChart follows.
+
+----------------------------------------------------------------------------
+
+MPAndroidChart
+Copyright 2014-2026 Philipp Jahoda
+
+This product includes software developed by Philipp Jahoda and the
+MPAndroidChart contributors (https://github.com/PhilJay/MPAndroidChart).
