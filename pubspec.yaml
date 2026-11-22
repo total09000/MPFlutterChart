@@ -12,6 +12,11 @@ topics:
   - graph
   - visualization
   - harmonyos
+screenshots:
+  - description: Line, bar, pie, stacked bar, candlestick, radar, bubble and scatter charts in the dark style.
+    path: screenshots/gallery-dark.png
+  - description: The same charts in the light style.
+    path: screenshots/gallery-light.png
 
 environment:
   sdk: ">=3.9.0 <4.0.0"

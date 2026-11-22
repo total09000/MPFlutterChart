@@ -4,6 +4,20 @@ A Flutter port of [MPAndroidChart](https://github.com/PhilJay/MPAndroidChart) v4
 class and member names as MPChartLib, written in pure Dart on top of `dart:ui`, with a Flutter widget layer on top.
 It runs on Android, iOS and HarmonyOS (OpenHarmony Flutter), and as pure Dart it also builds for the web and desktop.
 
+## Gallery
+
+The example app opens with every chart type in one consistent style, in a dark and a light variant, as
+MPChartExample does. These are screenshots of the Flutter example app on Android, drawn by this package.
+
+![Every chart type, dark](screenshots/gallery-dark.png)
+
+![Every chart type, light](screenshots/gallery-light.png)
+
+The other pages of the example app follow MPChartExample's Activities: here the Cubic line, Horizontal bar, Stacked
+bar and Basic pie pages.
+
+![Pages of the example app](screenshots/example-pages.png)
+
 ## Based on MPAndroidChart
 
 This package is a derivative work of **MPAndroidChart** by Philipp Jahoda and the MPAndroidChart contributors,
