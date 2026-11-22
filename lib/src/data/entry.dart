@@ -1,4 +1,5 @@
 // Ported from MPAndroidChart v4.0.1: MPChartLib/src/main/kotlin/com/github/mikephil/charting/data/Entry.kt
+import '../utils/float_math.dart';
 import '../utils/utils.dart';
 import 'base_entry.dart';
 
@@ -30,5 +31,5 @@ class Entry<D> extends BaseEntry<D> {
   }
 
   @override
-  String toString() => 'Entry, x: $x y: $y';
+  String toString() => 'Entry, x: ${kotlinFloatToString(x)} y: ${kotlinFloatToString(y)}';
 }

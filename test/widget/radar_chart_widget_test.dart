@@ -43,7 +43,7 @@ void main() {
               key: markerKey,
               width: 40,
               height: 20,
-              child: Text('${entry.y}'),
+              child: Text(entry.y.toStringAsFixed(1)),
             );
           },
           setup: (it) => chart = it,

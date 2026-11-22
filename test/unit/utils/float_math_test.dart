@@ -13,6 +13,15 @@ void main() {
     expect(toKotlinFloat(double.nan), isNaN);
   });
 
+  test('kotlinFloatToString keeps the .0 of a whole number', () {
+    expect(kotlinFloatToString(1), '1.0');
+    expect(kotlinFloatToString(-2), '-2.0');
+    expect(kotlinFloatToString(1.5), '1.5');
+    expect(kotlinFloatToString(double.nan), 'NaN');
+    expect(kotlinFloatToString(double.infinity), 'Infinity');
+    expect(kotlinFloatToString(1e21), '1e+21');
+  });
+
   test('kotlinFloatToInt truncates and saturates like Float.toInt()', () {
     expect(kotlinFloatToInt(2.9), 2);
     expect(kotlinFloatToInt(-2.9), -2);

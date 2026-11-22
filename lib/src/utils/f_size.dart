@@ -1,4 +1,5 @@
 // Ported from MPAndroidChart v4.0.1: MPChartLib/src/main/kotlin/com/github/mikephil/charting/utils/FSize.kt
+import 'float_math.dart';
 import 'object_pool.dart';
 
 /// Mutable width and height pair, usually a size in pixels such as measured text bounds.
@@ -30,7 +31,7 @@ class FSize extends Poolable {
   int get hashCode => width.hashCode ^ height.hashCode;
 
   @override
-  String toString() => '${width}x$height';
+  String toString() => '${kotlinFloatToString(width)}x${kotlinFloatToString(height)}';
 
   static final ObjectPool<FSize> _pool = ObjectPool.create(256, FSize(0, 0))
     ..replenishPercentage = 0.5;

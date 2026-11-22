@@ -269,7 +269,7 @@ void main() {
             controller: c,
             marker: (entry, highlight) {
               built.add((entry, highlight));
-              return SizedBox(width: 40, height: 20, child: Text('${entry.y}'));
+              return SizedBox(width: 40, height: 20, child: Text(entry.y.toStringAsFixed(1)));
             },
             setup: (it) {
               chart = it;
@@ -512,7 +512,7 @@ void main() {
 
         late LineChartView chart;
         Widget marker(Entry entry, Highlight highlight) =>
-            SizedBox(width: 40, height: 20, child: Text('${entry.y}'));
+            SizedBox(width: 40, height: 20, child: Text(entry.y.toStringAsFixed(1)));
         Widget build({required bool withMarker}) => _host(
           LineChart(
             data: _data(),

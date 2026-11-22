@@ -17,6 +17,14 @@ double toKotlinFloat(double value) {
   return _floatBuffer[0];
 }
 
+/// Kotlin's `Float.toString()` as far as Dart's `double.toString()` gives it: a whole number keeps its `.0` on the
+/// web too, where Dart prints `1.0` as `1`.
+String kotlinFloatToString(double value) {
+  final s = value.toString();
+  if (!value.isFinite || s.contains('.') || s.contains('e')) return s;
+  return '$s.0';
+}
+
 /// Kotlin `Float.toInt()`: truncates towards zero, saturating at the Int range; NaN gives 0.
 int kotlinFloatToInt(double value) {
   if (value.isNaN) return 0;

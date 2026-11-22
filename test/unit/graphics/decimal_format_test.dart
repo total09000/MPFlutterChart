@@ -1,5 +1,6 @@
 // Tests for the java.text.DecimalFormat shim DecimalFormat; no Kotlin counterpart.
 // Expected strings were produced by java.text.DecimalFormat on JDK 17 (Ruling R6: HALF_EVEN on the exact binary value).
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mp_flutter_chart/src/graphics/decimal_format.dart';
 
@@ -90,8 +91,14 @@ void main() {
     });
 
     test('ints format exactly (Java format(long))', () {
-      expect(DecimalFormat('###,###,###,##0').format(123456789012345678), '123,456,789,012,345,678');
-      expect(DecimalFormat('#').format(-9223372036854775808), '-9223372036854775808');
+      // Ints beyond 2^53 are not exact JavaScript numbers (and such a literal does not compile for the web).
+      if (!kIsWeb) {
+        expect(
+          DecimalFormat('###,###,###,##0').format(int.parse('123456789012345678')),
+          '123,456,789,012,345,678',
+        );
+        expect(DecimalFormat('#').format(int.parse('-9223372036854775808')), '-9223372036854775808');
+      }
       expect(DecimalFormat('#').format(0), '0');
     });
 

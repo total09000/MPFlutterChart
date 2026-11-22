@@ -3,6 +3,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mp_flutter_chart/src/graphics/chart_drawable.dart';
 import 'package:mp_flutter_chart/src/graphics/chart_paint.dart';
@@ -86,7 +87,10 @@ void main() {
 
   group('numbers', () {
     test('formatNumber saturates like Kotlin roundToLong', () {
-      expect(Utils.formatNumber(1e30, 0, false), '9223372036854775807');
+      // A JavaScript number has no Long.MAX_VALUE, so the digits of a saturated value are not exact on the web.
+      if (!kIsWeb) {
+        expect(Utils.formatNumber(1e30, 0, false), '9223372036854775807');
+      }
       expect(Utils.formatNumber(1234.5, 1, true), '1.234,5');
       expect(Utils.formatNumber(0.5, 0, false), '01');
     });

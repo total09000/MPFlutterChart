@@ -46,7 +46,7 @@ void main() {
           controller: c,
           marker: (entry, highlight) {
             built.add((entry, highlight));
-            return SizedBox(width: 40, height: 20, child: Text('${entry.y}'));
+            return SizedBox(width: 40, height: 20, child: Text(entry.y.toStringAsFixed(1)));
           },
           setup: (it) => chart = it,
         ),

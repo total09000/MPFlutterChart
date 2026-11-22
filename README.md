@@ -2,7 +2,7 @@
 
 A Flutter port of [MPAndroidChart](https://github.com/PhilJay/MPAndroidChart) v4.0.1, class for class: the same
 class and member names as MPChartLib, written in pure Dart on top of `dart:ui`, with a Flutter widget layer on top.
-It runs on Android, iOS and HarmonyOS (OpenHarmony Flutter).
+It runs on Android, iOS and HarmonyOS (OpenHarmony Flutter), and as pure Dart it also builds for the web and desktop.
 
 ## Based on MPAndroidChart
 
@@ -120,6 +120,7 @@ flutter test --exclude-tags golden,perf
 dart run tool/api_parity.dart --scope=all
 ```
 
+- `flutter test --platform chrome test/unit test/widget` runs the unit and widget tests in a browser.
 - `golden` tests (`test/golden/`) compare against PNGs rendered on macOS and are skipped on other hosts; regenerate
   them on macOS with `flutter test --update-goldens test/golden`.
 - `perf` tests (`test/perf/`) print timings for large data sets and have no thresholds.

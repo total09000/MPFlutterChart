@@ -1,5 +1,6 @@
 // Ported from MPAndroidChart v4.0.1: MPChartLib/src/main/kotlin/com/github/mikephil/charting/highlight/Highlight.kt
 import '../components/y_axis_dependency.dart';
+import '../utils/float_math.dart';
 
 /// Identifies one selected value in a chart: which entry it is, where it sits on screen and which
 /// data set, axis and, for stacked bars, which stack value it belongs to.
@@ -119,6 +120,7 @@ class Highlight {
 
   @override
   String toString() {
-    return 'Highlight, x: $x, y: $y, dataSetIndex: $dataSetIndex, stackIndex (only stacked barentry): $stackIndex';
+    return 'Highlight, x: ${kotlinFloatToString(x)}, y: ${kotlinFloatToString(y)}, dataSetIndex: $dataSetIndex, '
+        'stackIndex (only stacked barentry): $stackIndex';
   }
 }

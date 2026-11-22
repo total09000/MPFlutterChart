@@ -1,4 +1,5 @@
 // Ported from MPAndroidChart v4.0.1: MPChartLib/src/main/kotlin/com/github/mikephil/charting/utils/MPPointD.kt
+import 'float_math.dart';
 import 'object_pool.dart';
 
 /// Mutable point with double coordinates, used where chart values and pixel positions need the
@@ -21,7 +22,7 @@ class MPPointD extends Poolable {
   Poolable instantiate() => MPPointD(0, 0);
 
   @override
-  String toString() => 'MPPointD, x: $x, y: $y';
+  String toString() => 'MPPointD, x: ${kotlinFloatToString(x)}, y: ${kotlinFloatToString(y)}';
 
   static final ObjectPool<MPPointD> _pool = ObjectPool.create(
     64,

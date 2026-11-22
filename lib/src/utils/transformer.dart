@@ -2,7 +2,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show protected, visibleForTesting;
+import 'package:flutter/foundation.dart' show kIsWeb, protected, visibleForTesting;
 
 import '../graphics/matrix.dart';
 import '../graphics/mutable_rect.dart';
@@ -87,10 +87,21 @@ class Transformer {
   /// [ui.Path.fillType] of [path] is kept. When the one-step matrix does not exist (skew or perspective) or a term of
   /// it does not fit the Float range of the engine's matrices, the three matrices are applied one after another, as
   /// three `ui.Path.transform` copies.
+  ///
+  /// On the web the one-step matrix is applied through a `ui.Path.transform` copy: a path of the web engine that was
+  /// added to another path and then reset leaves that other path empty, so the buffer cannot be used there.
   void pathValueToPixel(ui.Path path) {
     final matrix4 = _pathMatrix4;
     if (!valueToPixelMatrix4(matrix4) || !_fitsFloat(matrix4)) {
       _pathValueToPixelInSteps(path);
+      return;
+    }
+    if (kIsWeb) {
+      final transformed = path.transform(matrix4);
+      final fillType = path.fillType;
+      path.reset();
+      path.fillType = fillType;
+      path.addPath(transformed, ui.Offset.zero);
       return;
     }
     final buffer = _pathBuffer;

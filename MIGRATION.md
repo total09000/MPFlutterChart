@@ -322,6 +322,10 @@ KDoc apply as written. This file lists the places where a call or a result diffe
   (CJK, emoji and the rest) counts as the line box, the font's ascent to descent without side bearings.
   `Utils.calcTextHeight`, `calcTextSize` and the axis label sizes, legend form positions and label offsets built on
   them follow.
+- **On the web, ints beyond 2^53 are not exact.** Dart ints are JavaScript numbers there, so `DecimalFormat.format`
+  of such an int and `Utils.formatNumber` of a value that large print digits that differ from Android's `Long`
+  arithmetic; `Utils.formatNumber` does not saturate at `Long.MAX_VALUE`. Smaller values format the same on every
+  platform.
 - **`Paint.FontMetrics.top` equals `ascent` and `bottom` equals `descent`.** Flutter has no separate top/bottom
   metrics, so `Utils.getLineSpacing` (`ascent - top + bottom` on Android) collapses to `descent`; multi-line
   legends are slightly tighter than on Android.
