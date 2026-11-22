@@ -55,7 +55,7 @@ animations. Bar-line charts zoom and pan by drag, pinch, double tap and fling; p
 
 ```yaml
 dependencies:
-  mp_flutter_chart: ^0.1.0
+  mp_flutter_chart: ^0.1.1
 ```
 
 Requires Flutter 3.35 or later (Dart 3.9 or later).

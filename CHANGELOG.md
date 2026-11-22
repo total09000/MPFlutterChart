@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+- README: a Gallery with screenshots of the example app, in the dark and the light style.
+- `pubspec.yaml` lists the two gallery images as screenshots for pub.dev.
+- No changes to the library code.
+
 ## 0.1.0
 
 First public release: a Flutter port of MPAndroidChart v4.0.1.
