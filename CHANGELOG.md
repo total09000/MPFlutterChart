@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- README in Simplified Chinese (`README.zh-CN.md`), with language links at the top of both READMEs.
+- No changes to the library code.
+
 ## 0.1.1
 
 - README: a Gallery with screenshots of the example app, in the dark and the light style.

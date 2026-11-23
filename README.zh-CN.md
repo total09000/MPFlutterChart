@@ -54,7 +54,7 @@ Android 上的截图，图表均由本库绘制。
 
 ```yaml
 dependencies:
-  mp_flutter_chart: ^0.1.1
+  mp_flutter_chart: ^0.1.2
 ```
 
 需要 Flutter 3.35 或更高版本（Dart 3.9 或更高版本）。
