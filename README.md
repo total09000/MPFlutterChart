@@ -1,5 +1,7 @@
 # mp_flutter_chart
 
+English | [简体中文](README.zh-CN.md)
+
 A Flutter port of [MPAndroidChart](https://github.com/PhilJay/MPAndroidChart) v4.0.1, class for class: the same
 class and member names as MPChartLib, written in pure Dart on top of `dart:ui`, with a Flutter widget layer on top.
 It runs on Android, iOS and HarmonyOS (OpenHarmony Flutter), and as pure Dart it also builds for the web and desktop.
