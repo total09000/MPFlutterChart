@@ -1,6 +1,11 @@
-# mp_flutter_chart
+# MPFlutterChart
 
 [English](README.md) | 简体中文
+
+pub.dev 上的包名是 [`mp_flutter_chart`](https://pub.dev/packages/mp_flutter_chart)。
+
+- 官网：<https://www.famakeji.top/mpflutterchart/>
+- 在线体验：<https://www.famakeji.top/mpflutterchart/demo/>，即示例 App 的 Web 版，直接在浏览器中运行
 
 [MPAndroidChart](https://github.com/PhilJay/MPAndroidChart) v4.0.1 的 Flutter 移植版，按类逐一移植：类名和成员名与
 MPChartLib 保持一致，用纯 Dart 基于 `dart:ui` 编写，上层再提供一层 Flutter widget。支持 Android、iOS 和鸿蒙
@@ -54,7 +59,7 @@ Android 上的截图，图表均由本库绘制。
 
 ```yaml
 dependencies:
-  mp_flutter_chart: ^0.1.2
+  mp_flutter_chart: ^0.1.3
 ```
 
 需要 Flutter 3.35 或更高版本（Dart 3.9 或更高版本）。

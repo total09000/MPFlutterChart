@@ -1,6 +1,11 @@
-# mp_flutter_chart
+# MPFlutterChart
 
 English | [简体中文](README.zh-CN.md)
+
+On pub.dev as [`mp_flutter_chart`](https://pub.dev/packages/mp_flutter_chart).
+
+- Website: <https://www.famakeji.top/mpflutterchart/en/>
+- Live demo: <https://www.famakeji.top/mpflutterchart/demo/>, the example app built for the web, running in the browser
 
 A Flutter port of [MPAndroidChart](https://github.com/PhilJay/MPAndroidChart) v4.0.1, class for class: the same
 class and member names as MPChartLib, written in pure Dart on top of `dart:ui`, with a Flutter widget layer on top.
@@ -57,7 +62,7 @@ animations. Bar-line charts zoom and pan by drag, pinch, double tap and fling; p
 
 ```yaml
 dependencies:
-  mp_flutter_chart: ^0.1.2
+  mp_flutter_chart: ^0.1.3
 ```
 
 Requires Flutter 3.35 or later (Dart 3.9 or later).
